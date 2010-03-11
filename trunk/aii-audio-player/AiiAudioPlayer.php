@@ -11,11 +11,15 @@
 	 * read tutorial "Customizing Audio Player" 
 	 * {@link http://www.macloo.com/examples/audio_player/options.html}
 	 * 
+	 * This extension requires {@link AiiJsAndCssPublishRegisterBehavior}
+	 * for publishing assets
+	 * 
 	 * @author Tomasz Suchanek <tomasz.suchanek@gmail.com>
 	 * @copyright Copyright &copy; 2008-2010 Tomasz "Aztech" Suchanek
 	 * @license http://www.yiiframework.com/license/
 	 * @package aii.extensions
 	 * @version 0.1.0
+	 * @uses {@link AiiJsAndCssPublishRegisterBehavior}
 	 */
   class AiiAudioPlayer extends CWidget
   {
