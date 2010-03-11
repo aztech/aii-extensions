@@ -24,7 +24,7 @@
   	 * @var string - Player Id (needed when using multiple players on one site)
 	 * default to 'audioplayer'
   	 */
-  	public $playerID ='audioplayer';
+  	public $playerID = 'audioplayer';
   	
   	/**
   	 * 
@@ -169,11 +169,11 @@
   	 * @param $value - optional
   	 * @return string options
   	 */
-  	private function buildOption($name,$amp=true,$value=null)
+  	private function buildOption( $name , $amp = true , $value = null )
   	{
-  		$optionValue = ($value !== null) ? $value : $this->{$name};
-  		$ampStr = ($amp === true) ? '&amp;' : '';
-  		return empty($optionValue) ? '' : $ampStr.$name.'='.$optionValue;
+  		$optionValue = ( $value !== null ) ? $value : $this->{$name};
+  		$ampStr = ( $amp === true ) ? '&' : '';
+  		return empty( $optionValue ) ? '' : "{$ampStr}{$name}={$optionValue}";
   	}
   	
   	/**
@@ -182,28 +182,28 @@
   	 */
     public function init()
     {
-		$basePath=dirname(__FILE__);
-    	
+		$basePath = dirname(__FILE__);
+    	$am = Yii::app( )->getAssetManager( );
     	#publish assets folder
 		if ( $this->assetsFolder === null )
 		{
 			$assets = $basePath.DIRECTORY_SEPARATOR.'assets';
-			$this->assetsFolder = Yii::app()->getAssetManager()->publish( $assets );
+			$this->assetsFolder = $am->publish( $assets );
 			
 			#check if assets are published
-			if ( $this->getPublishedPath( $assets ) === false )
-				throw new CException( Yii::t( 'azt-apwp' , 'Assets folder "{folder}" doesn\'t exist. Please update component!' );		
+			if ( $am->getPublishedPath( $assets ) === false )
+				throw new CException( Yii::t( 'aii-audio-player' , 'Assets folder "{folder}" doesn\'t exist. Please update component!' ) );		
 		}
         
 		#publish mp3 folder
 		if ( $this->mp3Folder === null )
 		{
 			$mp3Folder = $basePath.DIRECTORY_SEPARATOR.'mp3';
-			$this->mp3Folder = Yii::app()->getAssetManager()->publish( $mp3Folder );
+			$this->mp3Folder = $am->publish( $mp3Folder );
 			
 			#check if mp3 is published
-			if ( $this->getPublishedPath( $mp3Folder ) === false )
-				throw new CException( Yii::t( 'azt-apwp' , 'Mp3 folder "{folder}" doesn\'t exist. Please create it!' );
+			if ( $am->getPublishedPath( $mp3Folder ) === false )
+				throw new CException( Yii::t( 'aii-audio-player' , 'Mp3 folder "{folder}" doesn\'t exist. Please create it!' ) );
 		}
       
     	#register JS File
@@ -244,16 +244,6 @@
 		$flashVars .= $this->buildOption( 'soundFile' , true , $this->mp3Folder.'/'.$this->mp3 ); 
   		#render
 		$this->renderContent( $flashVars );
-		$this->render(
-			'_mp3',
-			array(
-				'playerJSFile' => $this->playerJSFile,
-				'playerSWFFile' => $this->assetsFolder.'/'.$this->playerSWFFile,
-				'playerId' => $this->playerID,
-				'flashVars' => $flashVars,
-				'measures' => array( 'height' => $this->height , 'width' => $this->width }
-			)
-  	   );
   	}
 	
 	private function renderParam( $name , $value )
@@ -265,19 +255,19 @@
 	protected function rendercontent( $flashVars )
 	{
 		if ( empty( $this->height ) )
-			throw new CException( Yii::t( 'azt-apwp' , 'Height can\'t be empty' ) );
+			throw new CException( Yii::t( 'aii-audio-player' , 'Height can\'t be empty' ) );
 			
 		if ( empty( $this->width ) )
-			throw new CException( Yii::t( 'azt-apwp' , 'Width can\'t be empty' ) );
+			throw new CException( Yii::t( 'aii-audio-player' , 'Width can\'t be empty' ) );
 			
 		echo CHtml::openTag( 'object' , array( 
+			'id' => $this->playerID,		
 			'type' => 'application/x-shockwave-flash',
-			'id' => $this->playerId,
-			'data' => $this->playerSWFFile,
+			'data' => $this->assetsFolder.'/'.$this->playerSWFFile,
 			'height' => $this->height,
 			'width' => $this->width
 		) );
-		echo $this->renderParam( 'movie' , $this->playerSWFFile );
+		echo $this->renderParam( 'movie' , $this->assetsFolder.'/'.$this->playerSWFFile );
 		echo $this->renderParam( 'FlashVars' , $flashVars );
 		echo $this->renderParam( 'quality' , 'high' );
 		echo $this->renderParam( 'menu' , 'false' );
