@@ -11,7 +11,7 @@
  * @package aii.extensions
  * @version 0.1.0
  **/
-class AiiJsAndCssPublishRegisterBehavior extends CBehavior
+class AiiPublishRegisterBehavior extends CBehavior
 {	
 	
 	/**
@@ -38,6 +38,8 @@ class AiiJsAndCssPublishRegisterBehavior extends CBehavior
 	 * @var string equals to initial value of {@link cssPath} if {assets} reference were used
 	 */
 	private $_cssPathTemplate;
+	
+	private $_published = array( );
 	
 	/**
 	 * @var string folder path to assets
@@ -71,12 +73,17 @@ class AiiJsAndCssPublishRegisterBehavior extends CBehavior
 	/**
 	 * @var array js files under {@link jsPath} to register
 	 */
-	public $jsToRegiser = array( );
+	public $jsToRegister = array( );
 	
 	/**
 	 * @var array core scripts to register
 	 */
 	public $coreScriptsToRegister = array( );
+	
+	/**
+	 * @var other resources that need to be published
+	 */
+	public $toPublish = array( );
 	
 	/**
 	 * @var boolean if set to false {@link assetsPath}, {@link cssPath} and {@link jsPath}
@@ -102,6 +109,11 @@ class AiiJsAndCssPublishRegisterBehavior extends CBehavior
 	public $share = false;
 	
 	/**
+	 * @var string directory where owner is found 
+	 */
+	public $ownerDirectory;
+	
+	/**
 	 * This methid publish all needed assets for specified CSS and JS fiels.
 	 * First core scripts are registered later CSS and JS files
 	 * @return boolean, false if nothing was published
@@ -109,10 +121,23 @@ class AiiJsAndCssPublishRegisterBehavior extends CBehavior
 	public function publishAndRegister( )
 	{
 		$this->_cs = Yii::app()->clientScript;
-		$this->_am  = Yii::app()->getAssetsMaanger();
+		$this->_am  = Yii::app()->getAssetManager();
 		$this->buildPaths( );
-		
-		return $this->registerCoreScripts( ) || $this->registerFromAssets( );
+		$res = true;
+		$res =& $this->registerCoreScripts( );
+		$res =& $this->registerFromAssets( );
+		$res =& $this->publishResources( );
+		return $res;
+	}
+	
+	/**
+	 * 
+	 * @param string $key ket from {@link toPublish} or one of standard avaliable {assets} {css} {js} 
+	 * @return string or false if published file not found
+	 */
+	public function getPublished( $key )
+	{
+		return isset( $this->_published[$key] ) ? $this->_published[$key] : false;
 	}
 	
 	/**
@@ -131,19 +156,36 @@ class AiiJsAndCssPublishRegisterBehavior extends CBehavior
 				$this->jsPath = '{assets}{/}js';
 			
 			#create real paths when placeholders used
-			$tr['{basePath}'] = dirname( get_class ( $this->owner ) );
+			$tr = $this->buildStandardTr( array( '{assets}' => $this->assetsPath) );
 			$this->assetsPath = strtr( $this->assetsPath, $tr );
 			
-			$tr['{assets}'] = $this->assetsPath;
-			$cssPath = strtr( $this->cssPath , $tr );
-			$this->_csPathTemplate = ( $cssPath === $this->cssPath ) ? $this->cssPath : null;
-			$this->cssPath = $cssPath;
-			$jsPath = strtr( $this->jsPath , $tr );
-			$this->_jsPathTemplate = ( $jsPath === $this->jsPath ) ? $this->jsPath : null;
-			$this->jsPath = $jsPath;
+			$this->_cssPathTemplate = ( substr_count( $this->cssPath , '{assets}' ) > 0 ) ? $this->cssPath : null;
+			$this->cssPath = strtr( $this->cssPath , $tr );
+			$this->_jsPathTemplate = ( substr_count( $this->jsPath , '{assets}' ) > 0 ) ? $this->jsPath : null;
+			$this->jsPath = strtr( $this->jsPath , $tr );
+			
+			foreach ( $this->toPublish as $key => $res )
+				$this->toPublish[$key] = strtr( $res , $tr );
 		}
 		else
-			Yii::trace( Yii::t( self::MSG_CAT , 'Assets already published under: "{path}"' , array( '{path}' => $this->assetsPath ) ) );		
+			Yii::trace( Yii::t( self::MSG_CAT , 'Assets already published under: "{path}"' , array( '{path}' => $this->assetsPath ) ) );
+	}
+	
+	/**
+	 * 
+	 * Publish resources
+	 * @return boolean false if nothing was published
+	 */
+	protected function publishResources()
+	{		
+		if ( empty ( $this->toPublish ) )
+			return false;
+		else
+		{
+			foreach ( $this->toPublish as $key => $res )
+				$this->_published[$key] = CHtml::asset( $res , $this->share );
+			return true;
+		} 
 	}
 	
 	/**
@@ -191,19 +233,22 @@ class AiiJsAndCssPublishRegisterBehavior extends CBehavior
 	{
 		if ( !empty( $this->cssToRegister ) )
 		{
-			if ( $this->pathsPublised === false  )
+			if ( $this->pathsPublished === false  )
 			{
 				#is it subfolder of published asset folder?
 				if ( $this->_cssPathTemplate )
 				{
-					$pubAssets = CHtml::asset( $this->assetsPath , $this->share );
-					$cssPub = strtr( $this->_cssPathTemplate , '{assets}' , $pubAssets );				
+					if ( !isset ( $this->_published['{assets}'] ) )
+						$this->_published['{assets}'] = CHtml::asset( $this->assetsPath , $this->share ); 
+					$this->_published['{css}'] = strtr(  $this->_cssPathTemplate ,
+						$this->buildStandardTr( array( '{assets}' => $this->_published['{assets'] 
+					) ) );
 				}
 				else
-					$cssPub = CHtml::asset( $this->cssPath , $this->share );
+					$this->_published['{css}'] = CHtml::asset( $this->cssPath , $this->share );
 			}
 			else
-				$cssPub = $this->cssPath;
+				$this->_published['{css}'] = $this->cssPath;
 				
 			#register all CSS files
 			foreach ( $this->cssToRegister  as $cssFile )
@@ -213,7 +258,7 @@ class AiiJsAndCssPublishRegisterBehavior extends CBehavior
 				#position where it should ne registered
 				$media = isset( $cssFile['media'] ) ? $cssFile['media'] : $this->defaultMedia;
 				#published resource 
-				$cssPubFile = $cssPub.DIRECTORY_SEPARATOR.$cssFileName;
+				$cssPubFile = $this->_published['{css}'].DIRECTORY_SEPARATOR.$cssFileName;
 				if ( !$this->_cs->isCssFileRegistered( $cssPubFile , $media) )
 				{
 					$this->_cs->registerScript( $jcssPubFile , $media );
@@ -246,14 +291,17 @@ class AiiJsAndCssPublishRegisterBehavior extends CBehavior
 				#is it subfolder of published asset folder?
 				if ( $this->_jsPathTemplate )
 				{
-					$pubAssets = CHtml::asset( $this->assetsPath , $this->share );
-					$jsPub = strtr( $this->_jsPathTemplate , '{assets}' , $pubAssets );				
+					if ( !isset( $this->_published['{assets}'] ) )
+						$this->_published['{assets}'] = CHtml::asset( $this->assetsPath , $this->share );
+					$this->_published['{js}'] = strtr( $this->_jsPathTemplate ,
+						$this->buildStandardTr( array( '{assets}' => $this->_published['{assets}']  
+					) ) ); 
 				}
 				else
-					$jsPub = CHtml::asset( $this->jsPath , $this->share );
+					$this->_published['{js}'] = CHtml::asset( $this->jsPath , $this->share );
 			}
 			else
-				$jsPub = $this->jsPath;	
+				$this->_published['{js}'] = $this->jsPath;	
 				
 			#register all JS files
 			foreach ( $this->jsToRegister  as $jsFile )
@@ -263,7 +311,7 @@ class AiiJsAndCssPublishRegisterBehavior extends CBehavior
 				#position where it should ne registered
 				$jsPos = isset( $jsFile['pos'] ) ? $jsFile['pos'] : $this->jsDefaultPos;
 				#published resource 
-				$jsPubFile = $jsPub.DIRECTORY_SEPARATOR.$jsFileName;
+				$jsPubFile = $this->_published['{js}'].DIRECTORY_SEPARATOR.$jsFileName;
 				if ( !$this->_cs->isScriptRegistered( $jsPubFile , $jsPos ) )
 				{
 					$this->_cs->registerScript( $jsPubFile , $jsPos );
@@ -278,6 +326,18 @@ class AiiJsAndCssPublishRegisterBehavior extends CBehavior
 		}
 		
 		return false;
+	}
+	
+	/**
+	 * 
+	 * @param array $additional
+	 * @return array
+	 */
+	private function buildStandardTr( array $additional = array ( ) )
+	{
+		$tr['{/}'] = DIRECTORY_SEPARATOR;
+		$tr['{basePath}'] = dirname( $this->ownerDirectory );
+		return array_merge( $tr , $additional );
 	}
 }
 ?>
