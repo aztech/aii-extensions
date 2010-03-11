@@ -14,9 +14,10 @@
 	 * @author Tomasz Suchanek <tomasz.suchanek@gmail.com>
 	 * @copyright Copyright &copy; 2008-2010 Tomasz "Aztech" Suchanek
 	 * @license http://www.yiiframework.com/license/
+	 * @package aii.extensions
 	 * @version 0.1.0
 	 */
-  class AudioPlayerWordPressPlugin extends CWidget
+  class AiiAudioPlayer extends CWidget
   {
   	
   	/**
