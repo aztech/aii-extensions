@@ -1,8 +1,26 @@
 <?php
 
 /**
- * This behavior implements logic supporting publishing JS and CSS assets
- * Note that if under {@link assetsPath}
+ * This behavior implements logic supporting publishing 
+ * and then registering JS and CSS owners assets,
+ * but may be used for publishing other filetypes as well.
+ * Design of this behavior is focused on supporting widgets,
+ * which usually consist assets to publish in own subdirectory. 
+ * This directory should be filled if you want to use {basePath} placeholder
+ * which points to {@link basePath} property value
+ * Usually you need to set it during behaviors initialization following
+ * <code>
+ *	$this->attachBehavior( 'pubRegManager',
+ *		array(
+ *			'class' => 'AiiPublishRegisterBehavior',
+ *			'cssPath' => false,
+ *			'jsToRegister' => array( 'audio-player.js' ),
+ *			'basePath' => __FILE__,
+ *			'toPublish' => array( 'mp3Folder' => $this->mp3Folder ),
+ *	) );
+ * </code>
+ * If you need to publish assets from directory which is not owners subdirectory
+ * you should can do thi with this behavior as well.
  * 
  * @author Tomasz Suchanek <tomasz.suchanek@gmail.com>
  * @copyright Copyright &copy; 2010 Tomasz "Aztech" Suchanek
@@ -17,7 +35,12 @@ class AiiPublishRegisterBehavior extends CBehavior
 	/**
 	 * @var message category
 	 */
-	const MSG_CAT = 'aii-js-and-css-publish-register-behavior';	
+	const MSG_CAT = 'aii-publish-register-behavior';
+	const NOT_PUBLISHED 		= 1;
+	const JS_PUBLISHED 			= 2;
+	const CSS_PUBLISHED 		= 4;
+	const ASSETS_PUBLISHED		= 8;
+	const OTHERS_PUBLISHED 		= 16;
 	
 	/**
 	 * @var CClientScript client script
@@ -30,22 +53,63 @@ class AiiPublishRegisterBehavior extends CBehavior
 	private $_am;
 	
 	/**
-	 * @var string equals to initial value of {@link jsPath} if {assets} reference were used
+	 * @var string equals to initial value of {@link jsPath} 
+	 * if {assets} reference were found in {@link jsPath} definition
 	 */
 	private $_jsPathTemplate;
 
 	/**
-	 * @var string equals to initial value of {@link cssPath} if {assets} reference were used
+	 * @var string equals to initial value of {@link cssPath} 
+	 * if {assets} reference were used in {@link cssPath}
 	 */
 	private $_cssPathTemplate;
 	
+	/**
+	 * Stores all files or directories which were published.
+	 */
 	private $_published = array( );
+	
+	/**
+	 * 
+	 * @var array stores ll generated paths
+	 */
+	private $_paths = array( );
+	
+	/**
+	 * @var boolean determines if paths and placeholders are generated
+	 */
+	private $_pathsGenerated = false;
+	
+	/**
+	 * @var integer  
+	 * {@link assetsPath}, {@link cssPath} and {@link jsPath}
+	 * are already published paths. This is mainly used when we know
+	 * published paths and we want just to register CSS and JS files.
+	 * If false, each path will be published
+	 * This value don't affects files passed into {@link toPublish} property
+	 */
+	public $publishingStatus = self::NOT_PUBLISHED;	
+	
+	/**
+	 * Array of pairs <id>-<file name>.
+	 * Setting id is not mandatory. Please use them in case you will
+	 * need to know where file or directory were published.
+	 * You can do this by passing <id> into {@link getPublished}
+	 * @var other resources that need to be published
+	 */
+	public $otherResToPublish = array( );	
+	
+	/**
+	 * @var string base path directory, usually set to directory where owner of behaviour is found 
+	 */
+	public $basePath;	
 	
 	/**
 	 * @var string folder path to assets
 	 * You can use here {basePath} placeholder
 	 * Set false if content shouldn't be published
 	 * Default to null, meaning path '{basePath}{/}assets' will be used
+	 * Note that {basePath} is detrmined basing on {@link basePath} value
 	 */
 	public $assetsPath = null;
 	
@@ -67,33 +131,47 @@ class AiiPublishRegisterBehavior extends CBehavior
 	
 	/**
 	 * @var array css files under {@link cssPath} to register
+	 * Array may consist only <cssFile> or pairs <media>-<cssFile> 
+	 * or its mixture, e.g
+	 *	<code>
+	 *		array( 
+	 *			'print' => 'print.css',
+	 *			'screen, projection' => 'main.css',
+	 *			'ie.css',
+	 *		);
+	 *	</code>
+	 * Leaving media empty, will set published css as media 'all'
 	 */
 	public $cssToRegister = array( );
 	
 	/**
 	 * @var array js files under {@link jsPath} to register
+	 * Array may consist only <jsFile> or pairs <position>-<jsFile> 
+	 * or its mixture, e.g.
+	 *	<code>
+	 *		array( 
+	 *			'2' => 'some.js',
+	 *			CClientScript::POS_LOAD => 'load.js',
+	 *			'head.js'
+	 *		);
+	 *	</code>
+	 * If position is not specified, by default position from
+	 * {@link jsDefaultPos} is used
 	 */
 	public $jsToRegister = array( );
 	
 	/**
 	 * @var array core scripts to register
+	 * Array consisting core names scipts to register, e.g.
+	 * 	<code>
+	 *		array ( 'jquery' , 'yiiactiveform' );
+	 * 	</code>
 	 */
 	public $coreScriptsToRegister = array( );
 	
 	/**
-	 * @var other resources that need to be published
-	 */
-	public $toPublish = array( );
-	
-	/**
-	 * @var boolean if set to false {@link assetsPath}, {@link cssPath} and {@link jsPath}
-	 * are already published paths 
-	 * Set to true, if you want to pass already published paths
-	 */
-	public $pathsPublished = false;
-	
-	/**
-	 * @var integer, the position of the JavaScript code, default  1, meaning HEAD
+	 * @var integer, the position of the JavaScript code.
+	 * Not that this value differs from Yii default, first is 1 (meaning HEAD) later is 4.
 	 */
 	public $jsDefaultPos = CClientScript::POS_HEAD;
 	
@@ -108,31 +186,19 @@ class AiiPublishRegisterBehavior extends CBehavior
 	 */
 	public $share = false;
 	
-	/**
-	 * @var string directory where owner is found 
-	 */
-	public $ownerDirectory;
-	
-	/**
-	 * This methid publish all needed assets for specified CSS and JS fiels.
-	 * First core scripts are registered later CSS and JS files
-	 * @return boolean, false if nothing was published
-	 */
-	public function publishAndRegister( )
+	private function initBehavior( )
 	{
-		$this->_cs = Yii::app()->clientScript;
-		$this->_am  = Yii::app()->getAssetManager();
+		if ( !isset( $this->_cs ) )
+			$this->_cs = Yii::app()->clientScript;
+		if ( !isset( $this->_am ) )
+			$this->_am = Yii::app()->getAssetManager();
 		$this->buildPaths( );
-		$res = true;
-		$res =& $this->registerCoreScripts( );
-		$res =& $this->registerFromAssets( );
-		$res =& $this->publishResources( );
-		return $res;
 	}
 	
 	/**
 	 * 
-	 * @param string $key ket from {@link toPublish} or one of standard avaliable {assets} {css} {js} 
+	 * @param string $key key taken from array {@link toPublish} 
+	 * Other avaliable keys are {basePath} {assets} {css} {js} 
 	 * @return string or false if published file not found
 	 */
 	public function getPublished( $key )
@@ -145,7 +211,7 @@ class AiiPublishRegisterBehavior extends CBehavior
 	 */
 	protected function buildPaths( )
 	{
-		if ( $this->pathsPublished === false )
+		if ( $this->_pathsGenerated === false )
 		{
 			#set defualts value if needed
 			if ( $this->assetsPath === null )
@@ -155,44 +221,22 @@ class AiiPublishRegisterBehavior extends CBehavior
 			if ( $this->jsPath === null )
 				$this->jsPath = '{assets}{/}js';
 			
-			#create real paths when placeholders used
-			$tr = $this->buildStandardTr( array( '{assets}' => $this->assetsPath) );
-			$this->assetsPath = strtr( $this->assetsPath, $tr );
-			
+			#create real paths when placeholders used			
+			$this->_paths['assets'] = strtr( $this->assetsPath, $this->getTr( ) ); 
 			$this->_cssPathTemplate = ( substr_count( $this->cssPath , '{assets}' ) > 0 ) ? $this->cssPath : null;
-			$this->cssPath = strtr( $this->cssPath , $tr );
+			$this->_paths['css'] = strtr( $this->cssPath , $this->getTr( ) );
 			$this->_jsPathTemplate = ( substr_count( $this->jsPath , '{assets}' ) > 0 ) ? $this->jsPath : null;
-			$this->jsPath = strtr( $this->jsPath , $tr );
-			
-			foreach ( $this->toPublish as $key => $res )
-				$this->toPublish[$key] = strtr( $res , $tr );
+			$this->_paths['js'] = strtr( $this->jsPath , $this->getTr( ) );
+			$this->_pathsGenerated = true;
 		}
-		else
-			Yii::trace( Yii::t( self::MSG_CAT , 'Assets already published under: "{path}"' , array( '{path}' => $this->assetsPath ) ) );
 	}
 	
 	/**
-	 * 
-	 * Publish resources
-	 * @return boolean false if nothing was published
-	 */
-	protected function publishResources()
-	{		
-		if ( empty ( $this->toPublish ) )
-			return false;
-		else
-		{
-			foreach ( $this->toPublish as $key => $res )
-				$this->_published[$key] = CHtml::asset( $res , $this->share );
-			return true;
-		} 
-	}
-	
-	/**
+	 * @param boolean, if it should initialize behavior to support aliases like {assets}
+	 * and publish assets
 	 * used internally for registering core scripts
-	 * @return boolean, false if nothing were registered
 	 */
-	protected function registerCoreScripts( )
+	public function registerCoreScripts( $initialized = false )
 	{
 		if ( empty( $this->coreScriptsToRegister ) )
 			Yii::trace( Yii::t( self::MSG_CAT , 'No core scripts to register' ) );
@@ -201,54 +245,31 @@ class AiiPublishRegisterBehavior extends CBehavior
 			foreach ( $this->coreScriptsToRegister as $coreScript )
 			{
 				$this->_cs->registerCoreScript( $coreScript );
-				Yii::trace( Yii::t( self::MSG_CAT , 'Core script  "{script}" registered.' , array( '{script}' => $coreScript ) ) );
+				Yii::trace( Yii::t( self::MSG_CAT , 'Core script "{script}" registered.' , array( '{script}' => $coreScript ) ) );
 			}
-			return true;
-		}	
-		return false;
+		}
 	}
 	
 	/**
-	 * used internally for registering CSS and JS scripts
-	 * @return boolean, false if there is nothing to register
+	 * Register JS and CSS files.  
+	 * If needed files are not published, implicit publishing is done
 	 */
-	protected function registerFromAssets( )
+	public function registerAll( )
 	{
-		if ( $this->cssPath === null && $this->jsPath === null )
-		{
-			Yii::trace( Yii::t( self::MSG_CAT , 'There is nothing to publish' ) );
-			return false;
-		}		
-		return $this->registerCss( ) || $this->registerJs( );
+		$this->registerCssFiles( );
+		$this->registerCoreScripts( );
+		$this->registerJsFiles( );
 	}
 	
 	/**
 	 * All css files form {@link cssToRegister} are registered
-	 * If {@link cssPath} is not published it is published here
-	 * If {@link cssPath} is a subfolder of {@link assetsPath} later is published
-	 * If {@link pathsPublished} it means that {@link cssPath} is already published
+	 * If {@link cssPath} is not published, files are not registered
 	 * @return boolean, false if there is nothing to register
 	 */
-	protected function registerCss( )
+	public function registerCssFiles( )
 	{
-		if ( !empty( $this->cssToRegister ) )
+		if ( !empty( $this->cssToRegister ) && $this->publishCssFiles( ) )
 		{
-			if ( $this->pathsPublished === false  )
-			{
-				#is it subfolder of published asset folder?
-				if ( $this->_cssPathTemplate )
-				{
-					if ( !isset ( $this->_published['{assets}'] ) )
-						$this->_published['{assets}'] = CHtml::asset( $this->assetsPath , $this->share ); 
-					$this->_published['{css}'] = strtr(  $this->_cssPathTemplate ,
-						$this->buildStandardTr( array( '{assets}' => $this->_published['{assets'] 
-					) ) );
-				}
-				else
-					$this->_published['{css}'] = CHtml::asset( $this->cssPath , $this->share );
-			}
-			else
-				$this->_published['{css}'] = $this->cssPath;
 				
 			#register all CSS files
 			foreach ( $this->cssToRegister  as $cssFile )
@@ -282,26 +303,10 @@ class AiiPublishRegisterBehavior extends CBehavior
 	 * If {@link pathsPublished} it means that {@link cssPath} is already published
 	 * @return boolean, false if nothing were registered
 	 */	
-	protected function registerJs( )
+	public function registerJsFiles( )
 	{
-		if ( !empty( $this->jsToRegister ) )
+		if ( !empty( $this->jsToRegister ) && $this->publishJsFiles( ) )
 		{
-			if ( $this->pathsPublished === false )
-			{
-				#is it subfolder of published asset folder?
-				if ( $this->_jsPathTemplate )
-				{
-					if ( !isset( $this->_published['{assets}'] ) )
-						$this->_published['{assets}'] = CHtml::asset( $this->assetsPath , $this->share );
-					$this->_published['{js}'] = strtr( $this->_jsPathTemplate ,
-						$this->buildStandardTr( array( '{assets}' => $this->_published['{assets}']  
-					) ) ); 
-				}
-				else
-					$this->_published['{js}'] = CHtml::asset( $this->jsPath , $this->share );
-			}
-			else
-				$this->_published['{js}'] = $this->jsPath;	
 				
 			#register all JS files
 			foreach ( $this->jsToRegister  as $jsFile )
@@ -327,17 +332,158 @@ class AiiPublishRegisterBehavior extends CBehavior
 		
 		return false;
 	}
+
+	/**
+	 * Publish all files in from directory specified in {@link assetsPath}
+	 * Published resource is available via placeholder {assets}
+	 * @return string published path
+	 */
+	public function publishAssets( )
+	{
+		if ( !$this->checkIsPublished( self::ASSETS_PUBLISHED ) )
+			return $this->_published['{assets}'] = CHtml::asset( strtr( $this->assetsPath , $this->getTr( ) ), $this->share );
+	}
+	
+	/**
+	 * Publish CSS fiels path. In case CSS file path is in reference to {@link assetsPath}
+	 * publish whole assets path. Note that assets reference is recognized by {assets} placeholder
+	 * @return string or false; published CSS files path or false if nothing to publish
+	 */
+	public function publishCssFiles( )
+	{
+		$this->initBehavior( );
+		#if css files path was not set, do nothing
+		if ( $this->cssPath === false )
+			return false;
+			
+		if ( !$this->checkIsPublished( self::CSS_PUBLISHED ) )
+		{
+			#if cssPath has {assets} placeholder publish all assets
+			if ( $this->cssPathTemplate )
+			{
+				$this->publishAssets( );
+				$this->published['{css}'] = strtr(  $this->_cssPathTemplate , $this->getTr( ) );
+			}
+			#publish "traditional" way
+			else
+				$this->_published['{css}'] = CHtml::asset( $this->cssPath , $this->share );
+		}
+		#check if user sets already published css files path
+		elseif ( !isset ( $this->_published['{css}'] ) )
+			$this->_published['{css}'] = $this->cssPath;
+		
+		$this->updateStatus( self::CSS_PUBLISHED );
+		return $this->_published['{css}'];
+	}
+	
+	/**
+	 * Publish JS files path. In case KS file path is in reference to {@link assetsPath}
+	 * publish whole assets path. Note that assets reference is recognized by {assets} placeholder
+	 * @return string or false; published JS files path or false if nothing to publish
+	 */
+	public function publishJsFiles( )
+	{
+		$this->initBehavior( );
+		#if js files path was not set, do nothing		
+		if ( $this->jsPath === false )
+			return false;
+			
+		if ( !$this->checkIsPublished( self::JS_PUBLISHED ) )
+		{
+			#if jsPath has {assets} placeholder publish all assets			
+			if ( $this->_jsPathTemplate )
+			{
+				$this->publishAssets( );
+				$this->_published['{js}'] = strtr( $this->_jsPathTemplate , $this->getTr( ) );
+			}
+			#publish "traditional" way
+			else
+				$this->_published['{js}'] = CHtml::asset( $this->jsPath , $this->share );
+		}
+		#check if user sets already published js files path		
+		elseif ( !isset ( $this->_published['{js}'] ) )
+			$this->_published['{js}'] = $this->jsPath;
+
+		$this->updateStatus( self::JS_PUBLISHED );
+		return $this->_published['{js}'];
+	}
+	
+	/**
+	 * Publish resources
+	 * @return boolean false if nothing was published
+	 */
+	public function publishResources( )
+	{		
+		$this->initBehavior( );
+		#start only if resources was not published 
+		if ( !$this->checkIsPublished( self::OTHERS_PUBLISHED ) )
+		{
+			if ( empty ( $this->otherResToPublish ) )
+			{
+				Yii::trace( Yii::t( self::MSG_CAT, 'There are no resources to publish.' ) );
+				return false;
+			}
+			else
+			{
+				foreach ( $this->otherResToPublish as $key => $res )
+				{
+					$this->_published[$key] = CHtml::asset( strtr( $res , $this->getTr( ) ) , $this->share );
+					Yii::trace( Yii::t( self::MSG_CAT , 'Resource "{res}" published as {published}.' , array( '{res}' => $res , '{published}' => $this->getPublished( $key ) ) ) );				
+				}
+				$this->updateStatus( self::OTHERS_PUBLISHED );
+			}
+		}
+		return true; 
+	}
+	
+	/**
+	 * This methid publish all needed assets for specified CSS and JS files.
+	 */
+	public function publishAll( )
+	{
+		$this->publishResources( );
+		$this->publishAssets( );
+		$this->publishCssFiles( );		
+		$this->publishJsFiles( );
+	}
 	
 	/**
 	 * 
-	 * @param array $additional
-	 * @return array
+	 * @param integer $level resource level number 
+	 * @return boolean,	true if particular resource is published
 	 */
-	private function buildStandardTr( array $additional = array ( ) )
+	private function checkIsPublished( $level = null )
 	{
+		if ( $level === null )
+			return ( $this->publishingStatus === ( self::INITIAL + self::JS_PUBLISHED + self::CSS_PUBLISHED + self::ASSETS_PUBLISHED + self::OTHERS_PUBLISHED ) );			
+		elseif ( ( $level % 2 ) !== 0 )
+			throw new CException( Yii::t( self::MSG_CAT , 'Level need to be power of 2!' ) );
+		return floor( $this->publishingStatus / $level ) % 2 === 1;
+	}
+	
+	/**
+	 * updates publishing status
+	 * @param integer $level resource level number
+	 */
+	private function updateStatus( $level )
+	{
+		if ( $this->checkIsPublished ( $level ) )
+			$this->publishingStatus += $level;
+	}
+
+	private function getTr( )
+	{
+		$tr = array( );
 		$tr['{/}'] = DIRECTORY_SEPARATOR;
-		$tr['{basePath}'] = dirname( $this->ownerDirectory );
-		return array_merge( $tr , $additional );
+		$tr['{basePath}'] = $this->basePath;
+		
+		if ( $this->checkIsPublished( self::JS_PUBLISHED ) )
+			$tr['{js}'] =  $this->_published['{js}'];
+		if ( $this->checkIsPublished ( self::CSS_PUBLISHED ) )
+			$tr['{css}'] = $this->_published['{css}'];
+		if ( $this->checkIsPublished ( self::ASSETS_PUBLISHED ) )
+			$tr['{assets}'] = $this->_published['{assets}'];		
+ 		return $tr;		
 	}
 }
 ?>
