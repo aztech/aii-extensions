@@ -1,4 +1,4 @@
-<?php
+	<?php
 	/**
 	 * This Widget is using Audio Player Wordpress plugin from 1 pixel out
 	 * {@link http://www.1pixelout.net/code/audio-player-wordpress-plugin/}
@@ -185,11 +185,12 @@
     		array(
     			'class' => 'AiiPublishRegisterBehavior',
     			'cssPath' => false,
-    			'jsToRegister' => array( 'audio-playe.js' ),
-    			'ownerDirectory' => __FILE__,
-    			'toPublish' => array( 'mp3Folder' => $this->mp3Folder ),
+    			'jsToRegister' => array( 'audio-player.js' ),
+    			'basePath' => dirname( __FILE__ ),
+    			'otherResToPublish' => array( 'mp3Folder' => $this->mp3Folder ),
     	) );
-    	$this->publishAndRegister( );
+    	$this->publishAll( );
+    	$this->registerAll( );
     }
   	
   	/**
