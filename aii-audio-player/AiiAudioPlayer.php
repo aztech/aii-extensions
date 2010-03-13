@@ -1,11 +1,11 @@
-	<?php
+<?php
 	/**
 	 * This Widget is using Audio Player Wordpress plugin from 1 pixel out
 	 * {@link http://www.1pixelout.net/code/audio-player-wordpress-plugin/}
 	 * This widget concerns using aforementioned player for non-Wordpress projects
 	 * 
 	 * To see more information about using aforementioned player for non-Wordpress project, 
-	 * please see {@link http://www.macloo.com/examples/audio_player/}
+	 * please visit {@link http://wpaudioplayer.com/standalone}
 	 * 
 	 * To see more inormation about options of Audio Player Wordpress plugin
 	 * read tutorial "Customizing Audio Player" 
@@ -277,7 +277,7 @@
     		array(
     			'class' => 'AiiPublishRegisterBehavior',
     			'cssPath' => false,
-    			'jsToRegister' => array( CClientScript::POS_HEAD , 'audio-player.js' ),
+    			'jsToRegister' => array( 'audio-player.js' ),
     			'basePath' => dirname( __FILE__ ),    		
     			'jsPath' => '{assets}/js',
     			'otherResToPublish' => array( 'mp3Folder' => $this->mp3Folder ),
@@ -288,11 +288,11 @@
   	
   	protected function addOption( $option , $value , $type, $playerId = null )
   	{
-  		$id = $playerId === null ? $this->playerId : $playerId;
+  		$id = $playerId === null ? $this->playerID : $playerId;
   		if ( isset( $this->_players[$id] ) )
   		{
-  			if ( $this->checkOptionName( $type , $option ) )
-  				$this->_players[$id][$option] = $value;
+  			if ( $this->checkOptionName( $option , $type  ) )
+  				$this->_players[$id]['options'][$option] = $value;
   		}
   		else
   			throw new CException( 'aii-audio-player' , Yii::t( 'Player with id {id} dosn\'t exist!' , array ( '{id}' => $id ) ) );
@@ -320,10 +320,12 @@
   	
   	public function checkOptionName( $name , $type )
   	{
-  		if ( isset( $this->_allowedKeys[$type][$name] ) )
+  		if ( isset( self::$_allowedKeys[$type][$name] ) )
   			return true;
   		else 
-  			throw new CException( 'aii-audio-player' , Yii::t( 'Unknown option name {name}.' , array ( '{name}' => $name ) ) );
+  		{
+  			throw new CException( Yii::t( 'aii-audio-player' , 'Unknown option name {name}.' , array ( '{name}' => $name ) ) );
+  		}  			
   	}
   	
   	protected function processOptions( )
@@ -339,8 +341,8 @@
 	  		foreach ( $this->trackOptions as $playerId => $tracks )
 	  			$this->processTrackOptions( $playerId , $tracks );
 	  	else
-	  		$this->preocessTrackOptions( $this->playerID , $this->trackOptions );
-	  		
+	  		$this->processTrackOptions( $this->playerID , $this->trackOptions );
+	  	
 	  	foreach ( $this->_players as $playerId => $player )
 	  	{
 	  		#do we have player-based player options?
@@ -348,33 +350,33 @@
 	  			if ( is_array( $this->playerOptions[$playerId] ) )
 	  				$this->addOptions( $playerId , $this->playerOptions[$playerId] , self::OPTION_PLAYER );
 	  			else
-	  				throw new CException( 'aii-audio-player', Yii::t( 'Player options for player "{player}" need to be specified via array.' , array ( '{player}' => $playerId ) ) );
+	  				throw new CException( Yii::t( 'aii-audio-player' , 'Player options for player "{player}" need to be specified via array.' , array ( '{player}' => $playerId ) ) );
 	  		elseif ( $this->singlePlayer === true )
 	  			$this->addSetupOptions( $this->playerOptions );
-	  		else
-	  			$this->addOptions( $playerId , $this->playerOptions[$playerId] , self::OPTION_PLAYER );
+			elseif ( is_array( $this->playerOptions ) )
+				$this->addOptions( $playerId , $this->playerOptions , self::OPTION_PLAYER );
 	  			
 	  		#do we have player-based flash options?
 	  		if ( isset ( $this->flashPlayerOptions[$playerId] ) )
 	  			if ( is_array( $this->flashPlayerOptions[$playerId] ) )
-	  				$this->addOptions( $playedId , $this->playerOptions[$playerId] , self::OPTION_PLAYER );
+	  				$this->addOptions( $playedId , $this->flashPlayerOptions[$playerId] , self::OPTION_FLASH );
 	  			else
-	  				throw new CException( 'aii-audio-player' , Yii::t( 'Flash player options for player "{player}" need to be specified via array.' , array ( '{player}' => $playerId ) ) );
+	  				throw new CException( Yii::t( 'aii-audio-player' , 'Flash player options for player "{player}" need to be specified via array.' , array ( '{player}' => $playerId ) ) );
 			elseif ( $this->singlePlayer === true )
 				$this->addSetupOptions( $this->flashPlayerOptions );
-			else
-				$this->addOptions( $playedId , $this->playerOptions[$playerId] , self::OPTION_PLAYER );
+			elseif ( is_array( $this->flashPlayerOptions ) )
+				$this->addOptions( $playedId , $this->flashPlayerOptions , self::OPTION_FLASH );
 
 			#do we have player-based colour scheme options?
 			if ( isset ( $this->colourSchemeOptions[$playerId] ) )
 				if ( is_array( $this->colourSchemeOptions[$playerId] ) )
 					$this->addOptions( $playedId , $this->colourSchemeOptions[$playerId] , self::OPTION_COLOUR );
 				else
-					throw new CException( 'aii-audio-player' , Yii::t( 'Colour scheme  player options for player "{player}" need to be specified via array.' , array ( '{player}' => $playerId ) ) );
+					throw new CException( Yii::t( 'aii-audio-player' , 'Colour scheme  player options for player "{player}" need to be specified via array.' , array ( '{player}' => $playerId ) ) );
 			elseif ( $this->singlePlayer === true )
-				$this->addSetupOptions( $this->flashPlayerOptions );
-			else
-				$this->addOptions( $playedId , $this->colourSchemeOptions[$playerId] , self::OPTION_COLOUR );
+				$this->addSetupOptions( $this->colourSchemeOptions );
+			elseif ( is_array( $this->colourSchemeOptions ) )
+				$this->addOptions( $playedId , $this->colourSchemeOptions , self::OPTION_COLOUR );			
 	  	}
   	}
   	
@@ -388,7 +390,7 @@
   	{
   		#mp3 file need to be specified
   		if ( !isset( $options['soundFile'] ) )
-  			throw new CException( 'aii-audio-player' , Yii::t( 'Mp3 file name is missing. Please set it via track option "soundFile".') );
+  			throw new CException( Yii::t( 'aii-audio-player' , 'Mp3 file name is missing. Please set it via track option "soundFile".') );
   		
   		#alternative content need to be specified
   		if ( isset( $options['alternative'] ) )
@@ -397,7 +399,7 @@
   			unset($options['alternative']);
   		}
   		else
-  			throw new CException( 'aii-audio-player' , Yii::t( 'Please specify alternative content for player {player}' , array( 'player' => $playerId ) ) );
+  			throw new CException( Yii::t( 'aii-audio-player' , 'Please specify alternative content for player {player}' , array( 'player' => $playerId ) ) );
 
 		$this->_players[$playerId]['tracks'] = $options;	
   	}
@@ -411,14 +413,14 @@
   	{
   		if ( isset( $this->_players[$playerId] ) )
   			if ( YII_DEBUG )
-  				foreach ( $options as $value )
-  					$this->addOption( $option , $value , $type );
+  				foreach ( $options as $option => $value )
+  					$this->addOption( $option , $value , $type , $playerId );
   			else
   				$this->_players[$playerId]['options'] = array_merge( $this->_players[$playerId]['options'] , $playerId );
   		else
   			if ( YII_DEBUG )
-  				foreach ( $options as $value )
-  					$this->addOption( $option , $value , $type );
+  				foreach ( $options as $option => $value )
+  					$this->addOption( $option , $value , $type , $playerId );
   			else
   				$this->_players[$playerId]['options'] = $options; 
   	}
@@ -437,26 +439,39 @@
 		if ( ( $assets = $this->getPublished( '{assets}' ) ) === false )
 			throw new CException( Yii::t( 'aii-audio-player' , 'Can\'t find published assets for Aii Audio Player extension.' ) );
 
-		$setupScriptTemplate = 'AudioPlayer.setup("{swf}", {{options}})'; 		
-		$embedScriptTemplate = 'AudioPlayer.embed("{playerId}", {{options}})';  		
-		
+		#create all options
+		$this->processOptions();			
+			
+		#templates to be used to generate audio player
+		$setupScriptTemplate = 'AudioPlayer.setup("{swf}"{comma}{options})'; 		
+		$embedScriptTemplate = 'AudioPlayer.embed("{playerId}", {options})';  					
+			
+		#publish head JS with audio player setup
 		$setupTr['{swf}'] = $this->getPublished( '{assets}' ).'/player.swf';		
 		if ( !empty( $this->_setup ) )
+		{
+			$setupTr['{comma}'] = ',';			
 			$setupTr['{options}'] = CJavaScript::encode( $this->_setup );
+		}
 		else
+		{
+			$setupTr['{comma}'] = '';
 			$setupTr['{options}'] = '';
-			
-		Yii::app()->getClientScript( )->registerScript( 'aiiaudioplayer' , strtr( $setupScriptTemplate , $setupTr ) , CClientScript::POS_HEAD );
+		}
+		Yii::app()->getClientScript( )->registerScript( 'aiiaudioplayer' , strtr( $setupScriptTemplate , $setupTr ) , CClientScript::POS_HEAD ); 
 		
+		#echoes each players
 		foreach ( $this->_players as $id => $player )
 		{
 			$embedTr = array( );			
-			$player['tracks']['soundFile'] .= $this->getPublished( 'mp3Folder' );
-			$embedTr['{options}'] = CJavaScript::encode( array_merge( $player['tracks'] , $player['options'] ) );
+			$player['tracks']['soundFile'] = $this->getPublished( 'mp3Folder' ).'/'.$player['tracks']['soundFile'];
+			if ( isset( $player['options'] ) )
+				$embedTr['{options}'] = CJavaScript::encode( array_merge( $player['tracks'] , $player['options'] ) );
+			else
+				$embedTr['{options}'] = CJavaScript::encode( $player['tracks'] );
 			$embedTr['{playerId}'] = $id;
-			echo CHtml::openTag( 'p', array( 'id' => $id  ) ).$player['alternative']
-				.CHtml::closeTag( 'p' )
-				.CHtml::script( strtr( $embedScriptTemplate , $embedTr ) ); 
+			echo CHtml::openTag( 'p', array( 'id' => $id  ) ).$player['alternative'].CHtml::closeTag( 'p' );
+			echo CHtml::script( strtr( $embedScriptTemplate , $embedTr ) ); 
 		}
 	}
   }
