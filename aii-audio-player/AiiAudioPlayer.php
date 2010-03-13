@@ -24,6 +24,12 @@
   class AiiAudioPlayer extends CWidget
   {
   	
+  	const OPTION_TRACK 	= 'track';
+  	const OPTION_PLAYER = 'player';
+  	const OPTION_FLASH 	= 'flashplayer';
+  	const OPTION_COLOUR = 'colourscheme';
+  	const OPTION_SEM  	= 'semantic';
+  	
   	/**
   	 * @var string - Player Id (needed when using multiple players on one site)
 	 * default to 'audioplayer'
@@ -32,123 +38,166 @@
   	
   	/**
   	 * 
-  	 * @var string - hex value - Background color string e.g. 
+  	 * @var boolean, true if only one player appears on page
   	 */
-  	public $bg;
+  	public $singlePlayer = false;
   	
   	/**
-  	 * 
-  	 * @var string - hex value - Left background
+  	 * @var array - list of mp3 files {@link mp3Folder}
+  	 * It's an array with 4 entries
+  	 * - soundFile - required, comma-delimited list of mp3 files
+  	 * - alternative - required, alternative content if player will not be displayed 
+  	 * - titles - optional, comma-delimited list of titles (overrides ID3 information) 
+  	 * - artists - optional, comma-delimited list of artists, overrides ID3 information
+  	 * with this way of declaration you will get one player with one or multiple mp3s.
+  	 * Example:
+  	 * 	<code>
+  	 * 		array( 
+  	 * 			'soundFile' => "example.mp3, interview.mp3", 
+  	 * 			'titles' => "Example MP3 , My latest interview",
+  	 * 			'artists' => "Artist name 1, artist name 2"
+  	 * 			'alternative' => "sorry, no file found"
+  	 * 		);
+  	 * 	</code>
+  	 * If you wan't to create more than one player, 
+  	 * please pass to this property array of aforementioned options
+  	 * with player ids. I
+  	 * Example:
+  	 * 	<code>
+  	 * 		array(
+  	 * 			'player1' => array(
+  	 * 				'soundFile' => "poker_face-lady_gaga.mp3", 
+  	 * 				'alternative' => "sorry, no file found"
+  	 * 			), 
+  	 * 			'player2' => array( 
+  	 * 				'soundFile' => "example.mp3, interview.mp3", 
+  	 * 				'titles' => "Example MP3 , My latest interview",
+  	 * 				'artists' => "Artist name 1, artist name 2"
+  	 * 				'alternative' => "sorry, no file found"
+  	 * 			); 
+  	 * 		);
+  	 * 	</code>
   	 */
-  	public $leftbg;
-  	/**
-  	 * 
-  	 * @var string - hex value - Left icon 
-  	 */
-  	public $lefticon;
-  	
-  	/**
-  	 * 
-  	 * @var string - hex value - The color the right background will change to on mouseover
-  	 */
-  	public $rightbg;
-  	
-  	/**
-  	 * 
-  	 * @var string - hex value -The color the right background will change to on mouseover
-  	 */
-  	public $rightbghover;
-  	
-  	/**
-  	 * 
-  	 * @var string - hex value - Right icon
-  	 */
-  	public $righticon;
-  	
+    public $trackOptions = array( );
+    
     /**
      * 
-     * @var string - hex value - The color the right icon will change to on mouseover
-     */  	
-  	public $righticonhover;
-
-  	/**
-  	 * 
-  	 * @var string - hex value - The color of text 
-  	 */
-  	public $text;
-  	
-  	/**
-  	 * 
-  	 * @var string - hex value - The color of slider
-  	 */
-  	public $slider;
-  	
-  	/**
-  	 * 
-  	 * @var string - hex value - unknown_type
-  	 */
-  	public $track;
-  	
-  	/**
-  	 * 
-  	 * @var string - hex value - This is the line surrounding the loader bar
-  	 */
-  	public $border;
-  	
-  	
-    /**
-     * 
-     * @var string - hex vlaue - This is color of loader
+     * @var array list of player options
+     * Below code shows also default values
+     * 	<code>
+     * 		array (
+     * 			'autostart' => "no",	//if yes, player starts automatically
+	 * 			'loop' 		=> "no",	//if yes, player loops
+	 * 			'animation'	=> "yes", 	//if no, player is always open
+	 * 			'remaining'	=> "no",	//if yes, shows remaining track time rather than ellapsed time
+	 * 			'noinfo'	=> "no",	//if yes, disables the track information display
+	 *			'initialvolume' => 60, 	//initial volume level (from 0 to 100)
+	 *			'buffer'	=> 5,		//buffering time in seconds
+	 * 			'encode'	=> "no",	//indicates that the mp3 file urls are encoded
+	 * 			'checkpolicy' => "no"	//tells Flash to look for a policy file when loading mp3 files
+	 *			(this allows Flash to read ID3 tags from files hosted on a different domain)
+	 * 			'rtl'		=> "no"		//switches the layout to RTL (right to left) for Hebrew and Arabic languages
+	 * 		);
+	 * </code>
+	 * 
+	 * If you would like to specify different options to each player 
+	 * please pass array of array options here, where key in first array is player id
+	 * Example:
+	 * 	<code>
+	 * 		array(
+	 * 			'player1' => array ( ... ),	//header options for 1st player
+	 * 			'player2' => array ( ... ), //header options for 2nd player
+	 * 			...
+	 * 			'playerN' => array ( ... ), //header options for Nth player
+	 * 		);
+	 * 	</code>
      */
-  	public $loader;
-
-  	/**
-  	 * 
-  	 * @var boolean - Should mp3 looping all the time?
-	 * Default to false
-  	 */
-  	public $loop = false;
-  	
-  	/**
-  	 * 
-  	 * @var boolean - Should mp3 start just after loading?
-	 * Default to false
-  	 */
-  	public $autostart = false;
-
-  	/**
-  	 * 
-  	 * @var string - mp3 file name (including extension) from folder {@link mp3Folder}
-  	 */
-    public $mp3;  	
-	
-  	/**
-  	 * 
-  	 * @var integer - object height, default to 24
-	 * Please change this value, when using own CSS, 
-	 * where players height differs from default
-  	 */	
-	public $height = 24;
-	
-  	/**
-  	 * 
-  	 * @var integer - object width, default to 480
-	 * Please change this value, when using own CSS, 
-	 * where players width differs from default
-  	 */		
-	public $width = 480;
-  	
+    public $playerOptions = array( );
+    
     /**
      * 
-     * @var string - JS filename
+     * @var array list of flash player options
+     * 	<code>
+     * 		array(
+	 *			'width' => 290,					//required, width of the player. e.g. 290 (290 pixels) or 100%		
+	 * 			'transparentpagebg' => "no",	//if yes, the player background is transparent (matches the page background)
+	 * 			'pagebg' => NA,					//player background color (set it to your page background when transparentbg is set to ‘no’) 
+     * 		);
+     * 	</code>
+     * 
+	 * If you would like to specify different options to each player 
+	 * please pass array of array options here, where key in first array is player id
+	 * Example:
+	 * 	<code>
+	 * 		array(
+	 * 			'player1' => array ( ... ),	//header options for 1st player
+	 * 			'player2' => array ( ... ), //header options for 2nd player
+	 * 			...
+	 * 			'playerN' => array ( ... ), //header options for Nth player
+	 * 		);
+	 * 	</code> 
      */
-  	protected $playerJSFile = 'audio-player.js';
-  	
-  	/**
-  	 * 
-  	 * @var string - SWF player filename
-  	 */
-  	protected $playerSWFFile = 'player.swf';
+    public $flashPlayerOptions = array( );
+    
+    
+	/**
+	 * 
+	 * @var array of colour scheme options
+	 * 	<code>
+	 * 		array(
+	 * 			'bg' => "E5E5E5", 				//Background
+	 * 			'leftbg' =>	"CCCCCC",			//Speaker icon/Volume control background
+	 * 			'lefticon' => "333333",			//Speaker icon
+	 * 			'voltrack' => "F2F2F2",			//Volume track
+	 * 			'volslider'	=> "666666",		//Volume slider
+	 * 			'rightbg' => "B4B4B4"			//Play/Pause button background
+	 * 			'rightbghover' => "999999"		//Play/Pause button background (hover state)
+	 * 			'righticon' => "333333"			//Play/Pause icon
+	 * 			'righticonhover' => "FFFFFF"	//Play/Pause icon (hover state)
+	 *			'loader' => "009900",			//Loading bar
+	 * 			'track'	=> "FFFFFF"				//Loading/Progress bar track backgrounds
+	 * 			'tracker' => "DDDDDD",			//Progress track
+	 * 			'border' => "CCCCCC",			//Progress bar border
+	 * 			'skip' => "666666",				//Previous/Next skip buttons
+	 * 			'text' => "333333",				//Text
+	 * 		);
+	 * 	</code>
+	 * 
+	 * If you would like to specify different options to each player 
+	 * please pass array of array options here, where key in first array is player id
+	 * Example:
+	 * 	<code>
+	 * 		array(
+	 * 			'player1' => array ( ... ),	//header options for 1st player
+	 * 			'player2' => array ( ... ), //header options for 2nd player
+	 * 			...
+	 * 			'playerN' => array ( ... ), //header options for Nth player
+	 * 		);
+	 * 	</code>
+	 */    
+    public $colourSchemeOptions = array( );
+    
+    /**
+     * Options used to initialize all players. The are overwritten 
+     * options set via {@link playerOptions}, {@link flashPlayerOptions} , 
+     * 	<code>
+     * 		array(
+     * 			AiiAudioPlayer::OPTION_PLAYER = array (	
+     * 			... here options like in {@link playerOptions}
+     * 			),
+     * 			AiiAudioPlayer::OPTION_FLASH = array (	
+     * 			... here options like in {@link flashOptions}
+     * 			),
+     * 			AiiAudioPlayer::OPTION_COLOUR = array (	
+     * 			... here options like in {@link colourOptions}
+     * 			),
+     * 		);
+     * 	</code>
+     * 
+     * {@link colourSchemeOptions}
+     * @var array
+     */
+    public $setupOptions = array( );
   	
   	/**
   	 * 
@@ -158,19 +207,62 @@
   	 */
   	protected $mp3Folder = null;
   	
+  	/**
+  	 * @var array
+  	 */
+  	private $_setup = array( );
   	
   	/**
-  	 * If param value is not set param name points also to class variable.
-  	 * @param $name
-  	 * @param $value - optional
-  	 * @return string options
+  	 * 
+  	 * @var array players
   	 */
-  	private function buildOption( $name , $amp = true , $value = null )
-  	{
-  		$optionValue = ( $value !== null ) ? $value : $this->{$name};
-  		$ampStr = ( $amp === true ) ? '&' : '';
-  		return empty( $optionValue ) ? '' : "{$ampStr}{$name}={$optionValue}";
-  	}
+  	private $_players = array( );
+  	
+  	private static $_allowedKeys = array(
+  		self::OPTION_TRACK => array(
+  			'soundFile' => true, 
+  	 		'titles'	=> false,
+  	 		'artists'	=> false,  		
+  		),
+  		self::OPTION_SEM => array(
+			'alternative' => true,  		
+  		),
+		self::OPTION_PLAYER => array(
+	     	'autostart' 		=> false,
+		 	'loop' 				=> false,
+		 	'animation'			=> false,
+		 	'remaining'			=> false,
+		 	'noinfo'			=> false,
+		 	'initialvolume' 	=> false,
+		 	'buffer'			=> false,
+		 	'encode'			=> false,
+		 	'checkpolicy' 		=> false,
+			'rtl'				=> false,		
+		),
+		self::OPTION_FLASH => array(
+			'width' 			=> false,		
+		 	'transparentpagebg' => false,
+		 	'pagebg' 			=> false,  		
+		),
+		self::OPTION_COLOUR => array(
+	  		'bg' 				=> false,
+		 	'leftbg' 			=> false,
+		 	'lefticon' 			=> false,
+		 	'voltrack' 			=> false,
+		 	'volslider' 		=> false,
+		 	'rightbg' 			=> false,
+		 	'rightbghover' 		=> false,
+		 	'righticon' 		=> false,
+		 	'righticonhover' 	=> false,
+		 	'loader' 			=> false,
+		 	'track'				=> false,
+		 	'tracker' 			=> false,
+		 	'border' 			=> false,
+		 	'skip' 				=> false,
+		 	'text' 				=> false,		
+		),
+  	);
+  	
   	
   	/**
   	 * (non-PHPdoc)
@@ -185,81 +277,187 @@
     		array(
     			'class' => 'AiiPublishRegisterBehavior',
     			'cssPath' => false,
-    			'jsToRegister' => array( 'audio-player.js' ),
-    			'basePath' => dirname( __FILE__ ),
+    			'jsToRegister' => array( CClientScript::POS_HEAD , 'audio-player.js' ),
+    			'basePath' => dirname( __FILE__ ),    		
+    			'jsPath' => '{assets}/js',
     			'otherResToPublish' => array( 'mp3Folder' => $this->mp3Folder ),
     	) );
     	$this->publishAll( );
     	$this->registerAll( );
     }
   	
-  	/**
-  	 * (non-PHPdoc)
-  	 * @see web/widgets/CWidget#run()
-  	 */
-  	public function run()
+  	protected function addOption( $option , $value , $type, $playerId = null )
   	{
-  		#first prepare flash variables basing on options
-  		# - required flash variables
-  		$flashVars = $this->buildOption( 'playerID' , false );
-		
-  		# - optional flash variables
-  		$flashVars .= $this->buildOption( 'bg' );
-  		$flashVars .= $this->buildOption( 'leftbg' );
-  		$flashVars .= $this->buildOption( 'lefticon' );
-  		$flashVars .= $this->buildOption( 'rightbg' );
-  		$flashVars .= $this->buildOption( 'rightbghover' );
-		$flashVars .= $this->buildOption( 'righticon' );
-  		$flashVars .= $this->buildOption( 'righticonhover' );
-  		$flashVars .= $this->buildOption( 'text' );
-  		$flashVars .= $this->buildOption( 'slider' );
-  		$flashVars .= $this->buildOption( 'track' );
-  		$flashVars .= $this->buildOption( 'border' );
-  		$flashVars .= $this->buildOption( 'loader' );
-  		$flashVars .= $this->buildOption( 'loop' , $this->loop ? 'yes' : 'no' );
-  		$flashVars .= $this->buildOption( 'autostart' , $this->autostart ? 'yes' : 'no' );
-  		#mp3 file name
-		$flashVars .= $this->buildOption( 'soundFile' , true , $this->getPublished( 'mp3Folder' ).'/'.$this->mp3 ); 
-  		#render
-		$this->renderContent( $flashVars );
+  		$id = $playerId === null ? $this->playerId : $playerId;
+  		if ( isset( $this->_players[$id] ) )
+  		{
+  			if ( $this->checkOptionName( $type , $option ) )
+  				$this->_players[$id][$option] = $value;
+  		}
+  		else
+  			throw new CException( 'aii-audio-player' , Yii::t( 'Player with id {id} dosn\'t exist!' , array ( '{id}' => $id ) ) );
+  	}
+  	
+  	public function addTrack( $playerId , $mp3 )
+  	{
+  		$this->_players[$player_id][] = $mp3;
+  	}
+  	
+  	public function addPlayerOption( )
+  	{
+  		$this->addOption( $option , $value , self::OPTION_PLAYER , $player_id );  		
+  	}
+  	
+  	public function addFlashPlayerOption( )
+  	{
+  		$this->addOption( $option , $value , self::OPTION_FLASH , $player_id );
+  	}
+  	
+  	public function addSemanticOption( )
+  	{
+  		$this->addOption( $option , $value , self::OPTION_SEM , $player_id );
+  	}
+  	
+  	public function checkOptionName( $name , $type )
+  	{
+  		if ( isset( $this->_allowedKeys[$type][$name] ) )
+  			return true;
+  		else 
+  			throw new CException( 'aii-audio-player' , Yii::t( 'Unknown option name {name}.' , array ( '{name}' => $name ) ) );
+  	}
+  	
+  	protected function processOptions( )
+  	{
+  		
+  		foreach ( $this->setupOptions as $setupOption )
+  			foreach ( array( self::OPTION_PLAYER , self::OPTION_FLASH , self::OPTION_COLOUR ) as $option )
+  			if ( isset ( $this->setupOptions[$option] ) )
+  				$this->addSetupOptions( $this->setupOptions[$option] );
+  		
+  		#do we have one or more players to create?
+  		if ( is_array ( current( $this->trackOptions ) ) )
+	  		foreach ( $this->trackOptions as $playerId => $tracks )
+	  			$this->processTrackOptions( $playerId , $tracks );
+	  	else
+	  		$this->preocessTrackOptions( $this->playerID , $this->trackOptions );
+	  		
+	  	foreach ( $this->_players as $playerId => $player )
+	  	{
+	  		#do we have player-based player options?
+	  		if ( isset( $this->playerOptions[$playerId] ) )
+	  			if ( is_array( $this->playerOptions[$playerId] ) )
+	  				$this->addOptions( $playerId , $this->playerOptions[$playerId] , self::OPTION_PLAYER );
+	  			else
+	  				throw new CException( 'aii-audio-player', Yii::t( 'Player options for player "{player}" need to be specified via array.' , array ( '{player}' => $playerId ) ) );
+	  		elseif ( $this->singlePlayer === true )
+	  			$this->addSetupOptions( $this->playerOptions );
+	  		else
+	  			$this->addOptions( $playerId , $this->playerOptions[$playerId] , self::OPTION_PLAYER );
+	  			
+	  		#do we have player-based flash options?
+	  		if ( isset ( $this->flashPlayerOptions[$playerId] ) )
+	  			if ( is_array( $this->flashPlayerOptions[$playerId] ) )
+	  				$this->addOptions( $playedId , $this->playerOptions[$playerId] , self::OPTION_PLAYER );
+	  			else
+	  				throw new CException( 'aii-audio-player' , Yii::t( 'Flash player options for player "{player}" need to be specified via array.' , array ( '{player}' => $playerId ) ) );
+			elseif ( $this->singlePlayer === true )
+				$this->addSetupOptions( $this->flashPlayerOptions );
+			else
+				$this->addOptions( $playedId , $this->playerOptions[$playerId] , self::OPTION_PLAYER );
+
+			#do we have player-based colour scheme options?
+			if ( isset ( $this->colourSchemeOptions[$playerId] ) )
+				if ( is_array( $this->colourSchemeOptions[$playerId] ) )
+					$this->addOptions( $playedId , $this->colourSchemeOptions[$playerId] , self::OPTION_COLOUR );
+				else
+					throw new CException( 'aii-audio-player' , Yii::t( 'Colour scheme  player options for player "{player}" need to be specified via array.' , array ( '{player}' => $playerId ) ) );
+			elseif ( $this->singlePlayer === true )
+				$this->addSetupOptions( $this->flashPlayerOptions );
+			else
+				$this->addOptions( $playedId , $this->colourSchemeOptions[$playerId] , self::OPTION_COLOUR );
+	  	}
+  	}
+  	
+  	/**
+  	 * Process single track options
+  	 * Track options should
+  	 * @param string $playerId	player ID
+  	 * @param array $options definition of mp3 files to publish
+  	 */
+  	protected function processTrackOptions( $playerId , array $options )
+  	{
+  		#mp3 file need to be specified
+  		if ( !isset( $options['soundFile'] ) )
+  			throw new CException( 'aii-audio-player' , Yii::t( 'Mp3 file name is missing. Please set it via track option "soundFile".') );
+  		
+  		#alternative content need to be specified
+  		if ( isset( $options['alternative'] ) )
+  		{
+  			$this->_players[$playerId]['alternative'] = $options['alternative'];
+  			unset($options['alternative']);
+  		}
+  		else
+  			throw new CException( 'aii-audio-player' , Yii::t( 'Please specify alternative content for player {player}' , array( 'player' => $playerId ) ) );
+
+		$this->_players[$playerId]['tracks'] = $options;	
+  	}
+  	
+  	/**
+  	 * 
+  	 * @param string $playerId player ID
+  	 * @param array $options options to add 
+  	 */
+  	protected function addOptions( $playerId , array $options , $type )
+  	{
+  		if ( isset( $this->_players[$playerId] ) )
+  			if ( YII_DEBUG )
+  				foreach ( $options as $value )
+  					$this->addOption( $option , $value , $type );
+  			else
+  				$this->_players[$playerId]['options'] = array_merge( $this->_players[$playerId]['options'] , $playerId );
+  		else
+  			if ( YII_DEBUG )
+  				foreach ( $options as $value )
+  					$this->addOption( $option , $value , $type );
+  			else
+  				$this->_players[$playerId]['options'] = $options; 
+  	}
+  	
+  	protected function addSetupOptions( $options )
+  	{
+  		$this->_setup = array_merge( $this->_setup , $options );  		
   	}
 	
-	private function renderParam( $name , $value )
+  	/**
+  	 * 
+  	 */
+	public function run( )
 	{
-		#note that param tags are not closed if embeded in object	
-		return CHtml::openTag( 'param' , array( 'name' => $name, 'value' => $value ) );
-	}
-	
-	protected function rendercontent( $flashVars )
-	{
-		if ( empty( $this->height ) )
-			throw new CException( Yii::t( 'aii-audio-player' , 'Property "height" can\'t be empty.' ) );
 			
-		if ( empty( $this->width ) )
-			throw new CException( Yii::t( 'aii-audio-player' , 'Property "width" can\'t be empty.' ) );
+		if ( ( $assets = $this->getPublished( '{assets}' ) ) === false )
+			throw new CException( Yii::t( 'aii-audio-player' , 'Can\'t find published assets for Aii Audio Player extension.' ) );
+
+		$setupScriptTemplate = 'AudioPlayer.setup("{swf}", {{options}})'; 		
+		$embedScriptTemplate = 'AudioPlayer.embed("{playerId}", {{options}})';  		
+		
+		$setupTr['{swf}'] = $this->getPublished( '{assets}' ).'/player.swf';		
+		if ( !empty( $this->_setup ) )
+			$setupTr['{options}'] = CJavaScript::encode( $this->_setup );
+		else
+			$setupTr['{options}'] = '';
 			
-		if ( empty ( $this->playerSWFFile ) )
-			throw new CException( Yii::t( 'aii-audio-player' , 'SWF player file setted by "playerSWFFile" property can\'t be empty.') );
-			
-		if ( empty ( $this->playerJSFile ) )
-			throw new CException( Yii::t( 'aii-audio-player' , 'JS player file setted by "playerJSFile" property can\'t be empty.') );
-			
-		if ( ( $assets = $this->getPublished( '{assets' ) ) === false )
-			throw new CExcpetion( Yii::t( 'aii-audio-player' , 'Can\'t find published assets for Aii Audio Player extension.' ) );
-			
-		echo CHtml::openTag( 'object' , array( 
-			'id' => $this->playerID,		
-			'type' => 'application/x-shockwave-flash',
-			'data' => $assets.'/'.$this->playerSWFFile,
-			'height' => $this->height,
-			'width' => $this->width
-		) );
-		echo $this->renderParam( 'movie' , $assets.'/'.$this->playerSWFFile );
-		echo $this->renderParam( 'FlashVars' , $flashVars );
-		echo $this->renderParam( 'quality' , 'high' );
-		echo $this->renderParam( 'menu' , 'false' );
-		echo $this->renderParam( 'wmode' , 'transparent' );
-		echo CHtml::closeTag( 'object' );
+		Yii::app()->getClientScript( )->registerScript( 'aiiaudioplayer' , strtr( $setupScriptTemplate , $setupTr ) , CClientScript::POS_HEAD );
+		
+		foreach ( $this->_players as $id => $player )
+		{
+			$embedTr = array( );			
+			$player['tracks']['soundFile'] .= $this->getPublished( 'mp3Folder' );
+			$embedTr['{options}'] = CJavaScript::encode( array_merge( $player['tracks'] , $player['options'] ) );
+			$embedTr['{playerId}'] = $id;
+			echo CHtml::openTag( 'p', array( 'id' => $id  ) ).$player['alternative']
+				.CHtml::closeTag( 'p' )
+				.CHtml::script( strtr( $embedScriptTemplate , $embedTr ) ); 
+		}
 	}
   }
 ?>
