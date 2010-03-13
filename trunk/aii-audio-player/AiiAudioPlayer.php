@@ -142,13 +142,13 @@
      * 
      * @var string - JS filename
      */
-  	private $playerJSFile = 'audio-player.js';
+  	protected $playerJSFile = 'audio-player.js';
   	
   	/**
   	 * 
   	 * @var string - SWF player filename
   	 */
-  	private $playerSWFFile = 'player.swf';
+  	protected $playerSWFFile = 'player.swf';
   	
   	/**
   	 * 
@@ -233,19 +233,28 @@
 	protected function rendercontent( $flashVars )
 	{
 		if ( empty( $this->height ) )
-			throw new CException( Yii::t( 'aii-audio-player' , 'Height can\'t be empty' ) );
+			throw new CException( Yii::t( 'aii-audio-player' , 'Property "height" can\'t be empty.' ) );
 			
 		if ( empty( $this->width ) )
-			throw new CException( Yii::t( 'aii-audio-player' , 'Width can\'t be empty' ) );
+			throw new CException( Yii::t( 'aii-audio-player' , 'Property "width" can\'t be empty.' ) );
+			
+		if ( empty ( $this->playerSWFFile ) )
+			throw new CException( Yii::t( 'aii-audio-player' , 'SWF player file setted by "playerSWFFile" property can\'t be empty.') );
+			
+		if ( empty ( $this->playerJSFile ) )
+			throw new CException( Yii::t( 'aii-audio-player' , 'JS player file setted by "playerJSFile" property can\'t be empty.') );
+			
+		if ( ( $assets = $this->getPublished( '{assets' ) ) === false )
+			throw new CExcpetion( Yii::t( 'aii-audio-player' , 'Can\'t find published assets for Aii Audio Player extension.' ) );
 			
 		echo CHtml::openTag( 'object' , array( 
 			'id' => $this->playerID,		
 			'type' => 'application/x-shockwave-flash',
-			'data' => $this->getPublished( '{assets}' ).'/'.$this->playerSWFFile,
+			'data' => $assets.'/'.$this->playerSWFFile,
 			'height' => $this->height,
 			'width' => $this->width
 		) );
-		echo $this->renderParam( 'movie' , $this->getPublished( '{assets}' ).'/'.$this->playerSWFFile );
+		echo $this->renderParam( 'movie' , $assets.'/'.$this->playerSWFFile );
 		echo $this->renderParam( 'FlashVars' , $flashVars );
 		echo $this->renderParam( 'quality' , 'high' );
 		echo $this->renderParam( 'menu' , 'false' );
