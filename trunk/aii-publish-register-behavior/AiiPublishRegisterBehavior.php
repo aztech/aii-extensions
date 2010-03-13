@@ -146,12 +146,12 @@ class AiiPublishRegisterBehavior extends CBehavior
 	
 	/**
 	 * @var array js files under {@link jsPath} to register
-	 * Array may consist only <jsFile> or pairs <position>-<jsFile> 
+	 * Array may consist only <jsFile> or pairs <jsFile>-<position>
 	 * or its mixture, e.g.
 	 *	<code>
 	 *		array( 
-	 *			'2' => 'some.js',
-	 *			CClientScript::POS_LOAD => 'load.js',
+	 *			'some.js' => '2',
+	 *			'load.js' => CClientScript::POS_LOAD,
 	 *			'head.js'
 	 *		);
 	 *	</code>
@@ -307,19 +307,18 @@ class AiiPublishRegisterBehavior extends CBehavior
 	{
 		if ( !empty( $this->jsToRegister ) && $this->publishJsFiles( ) )
 		{
-				
 			#register all JS files
-			foreach ( $this->jsToRegister  as $jsFile )
+			foreach ( $this->jsToRegister  as $jsFile => $pos )
 			{
 				#js file name
-				$jsFileName = is_string( $jsFile ) ? $jsFile : $jsFile['name'];
+				$jsFileName = empty( $pos ) || is_integer( $jsFile ) ? $pos : $jsFile;
 				#position where it should ne registered
-				$jsPos = isset( $jsFile['pos'] ) ? $jsFile['pos'] : $this->jsDefaultPos;
+				$jsPos = empty( $pos ) || is_integer( $jsFile ) ? $this->jsDefaultPos : $pos;
 				#published resource 
-				$jsPubFile = $this->_published['{js}'].DIRECTORY_SEPARATOR.$jsFileName;
+				$jsPubFile = $this->_published['{js}'].'/'.$jsFileName;
 				if ( !$this->_cs->isScriptRegistered( $jsPubFile , $jsPos ) )
 				{
-					$this->_cs->registerScript( $jsPubFile , $jsPos );
+					Yii::app()->getClientScript( )->registerScriptFile( $jsPubFile , $jsPos );
 					Yii::trace( 
 						Yii::t( self::MSG_CAT , 
 							'JS file  "{js}" was registered as {regisered}.' , 
@@ -339,9 +338,12 @@ class AiiPublishRegisterBehavior extends CBehavior
 	 * @return string published path
 	 */
 	public function publishAssets( )
-	{
+	{	
 		if ( !$this->checkIsPublished( self::ASSETS_PUBLISHED ) )
+		{
+			$this->updateStatus( self::ASSETS_PUBLISHED );
 			return $this->_published['{assets}'] = CHtml::asset( strtr( $this->assetsPath , $this->getTr( ) ), $this->share );
+		}
 	}
 	
 	/**
@@ -392,7 +394,7 @@ class AiiPublishRegisterBehavior extends CBehavior
 		{
 			#if jsPath has {assets} placeholder publish all assets			
 			if ( $this->_jsPathTemplate )
-			{
+			{				
 				$this->publishAssets( );
 				$this->_published['{js}'] = strtr( $this->_jsPathTemplate , $this->getTr( ) );
 			}
@@ -467,8 +469,7 @@ class AiiPublishRegisterBehavior extends CBehavior
 	 */
 	private function updateStatus( $level )
 	{
-		if ( $this->checkIsPublished ( $level ) )
-			$this->publishingStatus += $level;
+		$this->publishingStatus += $level;
 	}
 
 	private function getTr( )
