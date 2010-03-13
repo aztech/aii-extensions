@@ -1,4 +1,4 @@
-<?php
+	<?php
 	/**
 	 * This Widget is using Audio Player Wordpress plugin from 1 pixel out
 	 * {@link http://www.1pixelout.net/code/audio-player-wordpress-plugin/}
@@ -11,11 +11,15 @@
 	 * read tutorial "Customizing Audio Player" 
 	 * {@link http://www.macloo.com/examples/audio_player/options.html}
 	 * 
+	 * This extension requires {@link AiiJsAndCssPublishRegisterBehavior}
+	 * for publishing assets
+	 * 
 	 * @author Tomasz Suchanek <tomasz.suchanek@gmail.com>
 	 * @copyright Copyright &copy; 2008-2010 Tomasz "Aztech" Suchanek
 	 * @license http://www.yiiframework.com/license/
 	 * @package aii.extensions
 	 * @version 0.1.0
+	 * @uses {@link AiiJsAndCssPublishRegisterBehavior}
 	 */
   class AiiAudioPlayer extends CWidget
   {
@@ -114,7 +118,7 @@
 
   	/**
   	 * 
-  	 * @var string - Mp3 file name (including extension) from folder {@link mp3Folder}
+  	 * @var string - mp3 file name (including extension) from folder {@link mp3Folder}
   	 */
     public $mp3;  	
 	
@@ -136,31 +140,23 @@
   	
     /**
      * 
-     * @var string - JS File
+     * @var string - JS filename
      */
-  	private $playerJSFile = 'audio-player.js';
+  	protected $playerJSFile = 'audio-player.js';
   	
   	/**
   	 * 
-  	 * @var string - SWF player file
+  	 * @var string - SWF player filename
   	 */
-  	private $playerSWFFile = 'player.swf';
+  	protected $playerSWFFile = 'player.swf';
   	
   	/**
   	 * 
   	 * @var string - Publised folder with mp3 files
-	 * Default to null, which means that standard 'mp3' folder under
+	 * Default to null, which means that standard '{basepath}/mp3' folder under
 	 * extension directory will be published
   	 */
   	protected $mp3Folder = null;
-  	
-  	/**
-  	 * 
-  	 * @var string - Published folder with assets 
-	 * Default to null, which means that standard 'assets' folder under
-	 * extension directory will be published
-  	 */
-  	protected $assetsFolder = null;
   	
   	
   	/**
@@ -182,37 +178,19 @@
   	 */
     public function init()
     {
-		$basePath = dirname(__FILE__);
-    	$am = Yii::app( )->getAssetManager( );
-    	#publish assets folder
-		if ( $this->assetsFolder === null )
-		{
-			$assets = $basePath.DIRECTORY_SEPARATOR.'assets';
-			$this->assetsFolder = $am->publish( $assets );
-			
-			#check if assets are published
-			if ( $am->getPublishedPath( $assets ) === false )
-				throw new CException( Yii::t( 'aii-audio-player' , 'Assets folder "{folder}" doesn\'t exist. Please update component!' ) );		
-		}
-        
-		#publish mp3 folder
-		if ( $this->mp3Folder === null )
-		{
-			$mp3Folder = $basePath.DIRECTORY_SEPARATOR.'mp3';
-			$this->mp3Folder = $am->publish( $mp3Folder );
-			
-			#check if mp3 is published
-			if ( $am->getPublishedPath( $mp3Folder ) === false )
-				throw new CException( Yii::t( 'aii-audio-player' , 'Mp3 folder "{folder}" doesn\'t exist. Please create it!' ) );
-		}
-      
-    	#register JS File
-		$this->playerJSFile=CHtml::asset( $assets.DIRECTORY_SEPARATOR.$this->playerJSFile );
-		$cs = Yii::app()->clientScript; 
-		if($cs->isScriptRegistered( $this->playerJSFile ) === false )     
-			$cs->registerScriptFile( $this->playerJSFile );
-        
-      parent::init();
+    	parent::init( );
+    	if ( $this->mp3Folder === null )
+    		$this->mp3Folder = '{basePath}{/}mp3';
+    	$this->attachBehavior( 'pubMan', #publishManager
+    		array(
+    			'class' => 'AiiPublishRegisterBehavior',
+    			'cssPath' => false,
+    			'jsToRegister' => array( 'audio-player.js' ),
+    			'basePath' => dirname( __FILE__ ),
+    			'otherResToPublish' => array( 'mp3Folder' => $this->mp3Folder ),
+    	) );
+    	$this->publishAll( );
+    	$this->registerAll( );
     }
   	
   	/**
@@ -241,7 +219,7 @@
   		$flashVars .= $this->buildOption( 'loop' , $this->loop ? 'yes' : 'no' );
   		$flashVars .= $this->buildOption( 'autostart' , $this->autostart ? 'yes' : 'no' );
   		#mp3 file name
-		$flashVars .= $this->buildOption( 'soundFile' , true , $this->mp3Folder.'/'.$this->mp3 ); 
+		$flashVars .= $this->buildOption( 'soundFile' , true , $this->getPublished( 'mp3Folder' ).'/'.$this->mp3 ); 
   		#render
 		$this->renderContent( $flashVars );
   	}
@@ -255,19 +233,28 @@
 	protected function rendercontent( $flashVars )
 	{
 		if ( empty( $this->height ) )
-			throw new CException( Yii::t( 'aii-audio-player' , 'Height can\'t be empty' ) );
+			throw new CException( Yii::t( 'aii-audio-player' , 'Property "height" can\'t be empty.' ) );
 			
 		if ( empty( $this->width ) )
-			throw new CException( Yii::t( 'aii-audio-player' , 'Width can\'t be empty' ) );
+			throw new CException( Yii::t( 'aii-audio-player' , 'Property "width" can\'t be empty.' ) );
+			
+		if ( empty ( $this->playerSWFFile ) )
+			throw new CException( Yii::t( 'aii-audio-player' , 'SWF player file setted by "playerSWFFile" property can\'t be empty.') );
+			
+		if ( empty ( $this->playerJSFile ) )
+			throw new CException( Yii::t( 'aii-audio-player' , 'JS player file setted by "playerJSFile" property can\'t be empty.') );
+			
+		if ( ( $assets = $this->getPublished( '{assets' ) ) === false )
+			throw new CExcpetion( Yii::t( 'aii-audio-player' , 'Can\'t find published assets for Aii Audio Player extension.' ) );
 			
 		echo CHtml::openTag( 'object' , array( 
 			'id' => $this->playerID,		
 			'type' => 'application/x-shockwave-flash',
-			'data' => $this->assetsFolder.'/'.$this->playerSWFFile,
+			'data' => $assets.'/'.$this->playerSWFFile,
 			'height' => $this->height,
 			'width' => $this->width
 		) );
-		echo $this->renderParam( 'movie' , $this->assetsFolder.'/'.$this->playerSWFFile );
+		echo $this->renderParam( 'movie' , $assets.'/'.$this->playerSWFFile );
 		echo $this->renderParam( 'FlashVars' , $flashVars );
 		echo $this->renderParam( 'quality' , 'high' );
 		echo $this->renderParam( 'menu' , 'false' );
