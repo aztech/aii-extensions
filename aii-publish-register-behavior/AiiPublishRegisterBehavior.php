@@ -92,7 +92,6 @@ class AiiPublishRegisterBehavior extends CBehavior
 	/**
 	 * @var message category
 	 */
-	const MSG_CAT = 'aii-publish-register-behavior';
 	const NOT_PUBLISHED 		= 1;
 	const JS_PUBLISHED 			= 2;
 	const CSS_PUBLISHED 		= 4;
@@ -283,13 +282,13 @@ class AiiPublishRegisterBehavior extends CBehavior
 	public function registerCoreScripts( )
 	{
 		if ( empty( $this->coreScriptsToRegister ) )
-			Yii::trace( Yii::t( self::MSG_CAT , 'No core scripts to register' ) );
+			Yii::trace( Yii::t( 'aii-publish-register-behavior' , 'No core scripts to register' ) );
 		else		
 		{
 			foreach ( $this->coreScriptsToRegister as $coreScript )
 			{
 				Yii::app()->clientScript->registerCoreScript( $coreScript );
-				Yii::trace( Yii::t( self::MSG_CAT , 'Core script "{script}" registered.' , array( '{script}' => $coreScript ) ) );
+				Yii::trace( Yii::t( 'aii-publish-register-behavior' , 'Core script "{script}" registered.' , array( '{script}' => $coreScript ) ) );
 			}
 		}
 	}
@@ -329,7 +328,7 @@ class AiiPublishRegisterBehavior extends CBehavior
 				{
 					Yii::app()->clientScript->registerScript( $jcssPubFile , $media );
 					Yii::trace( 
-						Yii::t( self::MSG_CAT , 
+						Yii::t( 'aii-publish-register-behavior' , 
 							'Css file  "{css}" was registered as {regisered}.' , 
 							array( '{css}' => $cssFileName , '{registered}' => $cssPubFile, 
 					) ) );					
@@ -364,7 +363,7 @@ class AiiPublishRegisterBehavior extends CBehavior
 				{
 					Yii::app()->getClientScript( )->registerScriptFile( $jsPubFile , $jsPos );
 					Yii::trace( 
-						Yii::t( self::MSG_CAT , 
+						Yii::t( 'aii-publish-register-behavior' , 
 							'JS file  "{js}" was registered as {regisered}.' , 
 							array( '{js}' => $jsFileName , '{registered}' => $jsPubFile, 
 					) ) );					
@@ -468,7 +467,7 @@ class AiiPublishRegisterBehavior extends CBehavior
 		{
 			if ( empty ( $this->otherResToPublish ) )
 			{
-				Yii::trace( Yii::t( self::MSG_CAT, 'There are no resources to publish.' ) );
+				Yii::trace( Yii::t( 'aii-publish-register-behavior', 'There are no resources to publish.' ) );
 				return false;
 			}
 			else
@@ -476,7 +475,7 @@ class AiiPublishRegisterBehavior extends CBehavior
 				foreach ( $this->otherResToPublish as $key => $res )
 				{
 					$this->_published[$key] = CHtml::asset( strtr( $res , $this->getTr( ) ) , $this->share );
-					Yii::trace( Yii::t( self::MSG_CAT , 'Resource "{res}" published as {published}.' , array( '{res}' => $res , '{published}' => $this->getPublished( $key ) ) ) );				
+					Yii::trace( Yii::t( 'aii-publish-register-behavior' , 'Resource "{res}" published as {published}.' , array( '{res}' => $res , '{published}' => $this->getPublished( $key ) ) ) );				
 				}
 				$this->updateStatus( self::OTHERS_PUBLISHED );
 			}
@@ -505,7 +504,7 @@ class AiiPublishRegisterBehavior extends CBehavior
 		if ( $level === null )
 			return ( $this->publishingStatus === ( self::INITIAL + self::JS_PUBLISHED + self::CSS_PUBLISHED + self::ASSETS_PUBLISHED + self::OTHERS_PUBLISHED ) );			
 		elseif ( ( $level % 2 ) !== 0 )
-			throw new CException( Yii::t( self::MSG_CAT , 'Level need to be power of 2!' ) );
+			throw new CException( Yii::t( 'aii-publish-register-behavior' , 'Level need to be power of 2!' ) );
 		return floor( $this->publishingStatus / $level ) % 2 === 1;
 	}
 	
