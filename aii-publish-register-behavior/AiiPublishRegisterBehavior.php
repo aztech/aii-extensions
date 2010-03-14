@@ -2,12 +2,14 @@
 
 /**
  * This behavior implements logic supporting publishing 
- * and then registering JS and CSS owners assets,
+ * and then registering JS and CSS owner assets,
  * but may be used for publishing other filetypes as well.
- * Design of this behavior is focused on supporting widgets,
- * which usually consist assets to publish in own subdirectory. 
- * This directory should be filled if you want to use {basePath} placeholder
- * which points to {@link basePath} property value
+ * Design of this behavior is focused on supporting widgets
+ * with publishing own JS and CSS assets, which usually 
+ * are located under widget subdirectory.
+ * This subdirectory needs to be know to this behavior
+ * and it can be passed to behavior using {@link basePath} property value.
+ * Later, this subdirectory is avaliable also as {basePath} placeholder.
  * Usually you need to set it during behaviors initialization following
  * <code>
  *	$this->attachBehavior( 'pubRegManager',
@@ -19,8 +21,63 @@
  *			'toPublish' => array( 'mp3Folder' => $this->mp3Folder ),
  *	) );
  * </code>
- * If you need to publish assets from directory which is not owners subdirectory
+ * If you need to publish assets from directory which is not owner subdirectory
  * you should can do thi with this behavior as well.
+ * 
+ * Note that you can use also other placeholders when specifying paths to publish
+ * e.g. {assets} which points to {@link assetsPath}
+ * {js} which points to {@link jsPath}
+ * {css} which points to {@link cssPath}
+ * 
+ * By default behavior initializes all path properties with following value
+ * referencing to some aforementioned placeholders
+ *  - {@link assetsPath} is initialized with <code>{basePath}/assets</code>
+ *  - {@link jsPath} is initialized with <code>{assets}/js</code>
+ *  - {@link cssPath} is initialized with <code>{assets}/css</code>
+ *  
+ *  Hint: you can use {/} as alias for DIRECTORY_SEPARATOR
+ *  
+ *  Note that {@link otherResToPublish} are not set by default.
+ *  You can use this e.g. to publish such resorces as audio files, archieves, etc.
+ *  
+ *  If you need to register published CSS and JS files 
+ *  they need to be listed using properties 
+ *  (please refer them to see how to specify this files):
+ *  - {@link cssToRegister} 
+ *  - {@link jsToRegister}
+ *  
+ * You can also register Yii core scripts it owner need them by setting
+ * {@link coreScriptsToRegister}.
+ * 
+ * Note that by default all JS scripts are registered in head. You can change
+ * this beaavior by setting {@link jsDefaultPos} to one of constant 
+ * defined in {@link CClientScript}
+ * 
+ * All CSS files registered uses media type all. You can change this behavior by 
+ * setting {@link defaultMedia} to other value, e.g. screen.
+ * 
+ * Note that {@link cssToRegister} and {@link jsToRegister} allows to specify
+ * media type and position of registered JS script for each file separatelly.
+ * 
+ * If you need this behavior just for registering or paths passed to 
+ * {@link assetsPath} {@link jsPath} {@link cssPath} are mixture of published
+ * and unpublished path, you can inform this behavior about this by setting  
+ * {@link publishingStatus} to proper value. Setted value will inform behavior which 
+ * path points is published/unpublished.
+ * For example, value 6 means that ot via {@link cssPath} and {@link jsPath} 
+ * are passed published paths.
+ * Set 1 {@link NOT_PUBLISHED} to inform that nothing is published yet
+ * Add 2 {@link JS_PUBLISHED} to inform that {@link jsPath} is published
+ * Add 4 {@link CSS_PUBLISHED} to inform that {@link cssPath} is published 
+ * Add 8 {@link ASSETS_PUBLISHED} to inform that {@link assetsPath} is published
+ * Add 16 {@link OTHERS_PUBLISHED} to inform that all resources from {@link otherResToPublish} are published
+ * 
+ * You can also update status by calling method {@link updateStatus} but we awared 
+ * that this method do not check if particular resource is really published.
+ * Note also that calling this method twice for the same resource 
+ * will result with unproper {@link publishingStatus}  property value.
+ * To be sure that you are not changing status for second time, use method {@link checkIsPublished}
+ * 
  * 
  * @author Tomasz Suchanek <tomasz.suchanek@gmail.com>
  * @copyright Copyright &copy; 2010 Tomasz "Aztech" Suchanek
@@ -41,16 +98,6 @@ class AiiPublishRegisterBehavior extends CBehavior
 	const CSS_PUBLISHED 		= 4;
 	const ASSETS_PUBLISHED		= 8;
 	const OTHERS_PUBLISHED 		= 16;
-	
-	/**
-	 * @var CClientScript client script
-	 */
-	private $_cs;
-	
-	/**
-	 * @var CAssetManager asset manager
-	 */
-	private $_am;
 	
 	/**
 	 * @var string equals to initial value of {@link jsPath} 
@@ -186,20 +233,19 @@ class AiiPublishRegisterBehavior extends CBehavior
 	 */
 	public $share = false;
 	
+	/**
+	 * used internally to initialize bahavior
+	 */
 	private function initBehavior( )
 	{
-		if ( !isset( $this->_cs ) )
-			$this->_cs = Yii::app()->clientScript;
-		if ( !isset( $this->_am ) )
-			$this->_am = Yii::app()->getAssetManager();
 		$this->buildPaths( );
 	}
 	
 	/**
 	 * 
-	 * @param string $key key taken from array {@link toPublish} 
+	 * @param string $key key taken from array {@link otherResToPublish} 
 	 * Other avaliable keys are {basePath} {assets} {css} {js} 
-	 * @return string or false if published file not found
+	 * @return string to published resource or false if published file not found
 	 */
 	public function getPublished( $key )
 	{
@@ -232,11 +278,9 @@ class AiiPublishRegisterBehavior extends CBehavior
 	}
 	
 	/**
-	 * @param boolean, if it should initialize behavior to support aliases like {assets}
-	 * and publish assets
-	 * used internally for registering core scripts
+	 * publish Yii core scripts
 	 */
-	public function registerCoreScripts( $initialized = false )
+	public function registerCoreScripts( )
 	{
 		if ( empty( $this->coreScriptsToRegister ) )
 			Yii::trace( Yii::t( self::MSG_CAT , 'No core scripts to register' ) );
@@ -244,26 +288,27 @@ class AiiPublishRegisterBehavior extends CBehavior
 		{
 			foreach ( $this->coreScriptsToRegister as $coreScript )
 			{
-				$this->_cs->registerCoreScript( $coreScript );
+				Yii::app()->clientScript->registerCoreScript( $coreScript );
 				Yii::trace( Yii::t( self::MSG_CAT , 'Core script "{script}" registered.' , array( '{script}' => $coreScript ) ) );
 			}
 		}
 	}
 	
 	/**
-	 * Register JS and CSS files.  
+	 * Register JS scripts, CSS files and core scripts  
 	 * If needed files are not published, implicit publishing is done
 	 */
 	public function registerAll( )
 	{
+		$this->registerCoreScripts( );		
 		$this->registerCssFiles( );
-		$this->registerCoreScripts( );
 		$this->registerJsFiles( );
 	}
 	
 	/**
 	 * All css files form {@link cssToRegister} are registered
-	 * If {@link cssPath} is not published, files are not registered
+	 * If {@link cssPath} is not published it is published here
+	 * If {@link cssPath} is a subfolder of {@link assetsPath} the later is published
 	 * @return boolean, false if there is nothing to register
 	 */
 	public function registerCssFiles( )
@@ -280,9 +325,9 @@ class AiiPublishRegisterBehavior extends CBehavior
 				$media = isset( $cssFile['media'] ) ? $cssFile['media'] : $this->defaultMedia;
 				#published resource 
 				$cssPubFile = $this->_published['{css}'].DIRECTORY_SEPARATOR.$cssFileName;
-				if ( !$this->_cs->isCssFileRegistered( $cssPubFile , $media) )
+				if ( !Yii::app()->clientScript->isCssFileRegistered( $cssPubFile , $media) )
 				{
-					$this->_cs->registerScript( $jcssPubFile , $media );
+					Yii::app()->clientScript->registerScript( $jcssPubFile , $media );
 					Yii::trace( 
 						Yii::t( self::MSG_CAT , 
 							'Css file  "{css}" was registered as {regisered}.' , 
@@ -297,10 +342,9 @@ class AiiPublishRegisterBehavior extends CBehavior
 	}
 	
 	/**
-	 * All css files form {@link cssToRegister} are registered
-	 * If {@link cssPath} is not published it is published here
-	 * If {@link cssPath} is a subfolder of {@link assetsPath} later is published
-	 * If {@link pathsPublished} it means that {@link cssPath} is already published
+	 * All js files form {@link jsToRegister} are registered
+	 * If {@link jsPath} is not published it is published here
+	 * If {@link jsPath} is a subfolder of {@link assetsPath} the later is published
 	 * @return boolean, false if nothing were registered
 	 */	
 	public function registerJsFiles( )
@@ -316,7 +360,7 @@ class AiiPublishRegisterBehavior extends CBehavior
 				$jsPos = empty( $pos ) || is_integer( $jsFile ) ? $this->jsDefaultPos : $pos;
 				#published resource 
 				$jsPubFile = $this->_published['{js}'].'/'.$jsFileName;
-				if ( !$this->_cs->isScriptRegistered( $jsPubFile , $jsPos ) )
+				if ( !Yii::app()->clientScript->isScriptRegistered( $jsPubFile , $jsPos ) )
 				{
 					Yii::app()->getClientScript( )->registerScriptFile( $jsPubFile , $jsPos );
 					Yii::trace( 
@@ -348,7 +392,8 @@ class AiiPublishRegisterBehavior extends CBehavior
 	
 	/**
 	 * Publish CSS fiels path. In case CSS file path is in reference to {@link assetsPath}
-	 * publish whole assets path. Note that assets reference is recognized by {assets} placeholder
+	 * this methiod publish them if they are not published yet.
+	 * Note that assets reference is recognized by {assets} placeholder
 	 * @return string or false; published CSS files path or false if nothing to publish
 	 */
 	public function publishCssFiles( )
@@ -379,8 +424,9 @@ class AiiPublishRegisterBehavior extends CBehavior
 	}
 	
 	/**
-	 * Publish JS files path. In case KS file path is in reference to {@link assetsPath}
-	 * publish whole assets path. Note that assets reference is recognized by {assets} placeholder
+	 * Publish JS files path. In case JS file path is in reference to {@link assetsPath}
+	 * this methiod publish them if they are not published yet. 
+	 * Note that assets reference is recognized by {assets} placeholder
 	 * @return string or false; published JS files path or false if nothing to publish
 	 */
 	public function publishJsFiles( )
@@ -411,7 +457,7 @@ class AiiPublishRegisterBehavior extends CBehavior
 	}
 	
 	/**
-	 * Publish resources
+	 * Publish resources from {@link otherResToPublish}
 	 * @return boolean false if nothing was published
 	 */
 	public function publishResources( )
@@ -439,7 +485,7 @@ class AiiPublishRegisterBehavior extends CBehavior
 	}
 	
 	/**
-	 * This methid publish all needed assets for specified CSS and JS files.
+	 * This method publish files from all specified path (assets, css, js, resources)
 	 */
 	public function publishAll( )
 	{
@@ -450,11 +496,11 @@ class AiiPublishRegisterBehavior extends CBehavior
 	}
 	
 	/**
-	 * 
+	 * Check if resource is published 
 	 * @param integer $level resource level number 
 	 * @return boolean,	true if particular resource is published
 	 */
-	private function checkIsPublished( $level = null )
+	public function checkIsPublished( $level = null )
 	{
 		if ( $level === null )
 			return ( $this->publishingStatus === ( self::INITIAL + self::JS_PUBLISHED + self::CSS_PUBLISHED + self::ASSETS_PUBLISHED + self::OTHERS_PUBLISHED ) );			
@@ -467,11 +513,14 @@ class AiiPublishRegisterBehavior extends CBehavior
 	 * updates publishing status
 	 * @param integer $level resource level number
 	 */
-	private function updateStatus( $level )
+	public function updateStatus( $level )
 	{
 		$this->publishingStatus += $level;
 	}
 
+	/**
+	 * @return array array used in strtr function to replace placeholders with real values
+	 */
 	private function getTr( )
 	{
 		$tr = array( );
