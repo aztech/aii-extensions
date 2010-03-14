@@ -329,7 +329,7 @@ class AiiPublishRegisterBehavior extends CBehavior
 					Yii::app()->clientScript->registerScript( $jcssPubFile , $media );
 					Yii::trace( 
 						Yii::t( 'aii-publish-register-behavior' , 
-							'Css file  "{css}" was registered as {regisered}.' , 
+							'Css file "{css}" was registered as {registered}.' , 
 							array( '{css}' => $cssFileName , '{registered}' => $cssPubFile, 
 					) ) );					
 				}
@@ -364,7 +364,7 @@ class AiiPublishRegisterBehavior extends CBehavior
 					Yii::app()->getClientScript( )->registerScriptFile( $jsPubFile , $jsPos );
 					Yii::trace( 
 						Yii::t( 'aii-publish-register-behavior' , 
-							'JS file  "{js}" was registered as {regisered}.' , 
+							'JS file "{js}" was registered as {registered}.' , 
 							array( '{js}' => $jsFileName , '{registered}' => $jsPubFile, 
 					) ) );					
 				}
