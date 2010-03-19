@@ -321,12 +321,13 @@ class AiiPublishRegisterBehavior extends CBehavior
 				#css file name
 				$cssFileName = is_string( $cssFile ) ? $cssFile : $cssFile['name'];
 				#position where it should ne registered
-				$media = isset( $cssFile['media'] ) ? $cssFile['media'] : $this->defaultMedia;
+				$media = is_array( $cssFile ) && isset( $cssFile['media'] ) ? $cssFile['media'] : $this->defaultMedia;
 				#published resource 
-				$cssPubFile = $this->_published['{css}'].DIRECTORY_SEPARATOR.$cssFileName;
-				if ( !Yii::app()->clientScript->isCssFileRegistered( $cssPubFile , $media) )
+				$cssPubFile = $this->_published['{css}'].'/'.$cssFileName;
+				echo $cssPubFile;
+				if ( !Yii::app()->clientScript->isCssFileRegistered( $cssPubFile , $media ) )
 				{
-					Yii::app()->clientScript->registerScript( $jcssPubFile , $media );
+					Yii::app()->clientScript->registerCssFile( $cssPubFile , $media );
 					Yii::trace( 
 						Yii::t( 'aii-publish-register-behavior' , 
 							'Css file "{css}" was registered as {registered}.' , 
@@ -382,11 +383,13 @@ class AiiPublishRegisterBehavior extends CBehavior
 	 */
 	public function publishAssets( )
 	{	
-		if ( !$this->checkIsPublished( self::ASSETS_PUBLISHED ) )
+		if ( $this->checkIsPublished( self::ASSETS_PUBLISHED ) === false )
 		{
+			$tr = $this->getTr( );
 			$this->updateStatus( self::ASSETS_PUBLISHED );
-			return $this->_published['{assets}'] = CHtml::asset( strtr( $this->assetsPath , $this->getTr( ) ), $this->share );
+			$this->_published['{assets}'] = CHtml::asset( strtr( $this->assetsPath , $tr ), $this->share );
 		}
+		return isset( $this->_published['{assets}'] ) ? $this->_published['{assets}'] : false;
 	}
 	
 	/**
@@ -405,10 +408,10 @@ class AiiPublishRegisterBehavior extends CBehavior
 		if ( !$this->checkIsPublished( self::CSS_PUBLISHED ) )
 		{
 			#if cssPath has {assets} placeholder publish all assets
-			if ( $this->cssPathTemplate )
+			if ( $this->_cssPathTemplate )
 			{
 				$this->publishAssets( );
-				$this->published['{css}'] = strtr(  $this->_cssPathTemplate , $this->getTr( ) );
+				$this->_published['{css}'] = strtr(  $this->_cssPathTemplate , $this->getTr( ) );
 			}
 			#publish "traditional" way
 			else
@@ -525,7 +528,6 @@ class AiiPublishRegisterBehavior extends CBehavior
 		$tr = array( );
 		$tr['{/}'] = DIRECTORY_SEPARATOR;
 		$tr['{basePath}'] = $this->basePath;
-		
 		if ( $this->checkIsPublished( self::JS_PUBLISHED ) )
 			$tr['{js}'] =  $this->_published['{js}'];
 		if ( $this->checkIsPublished ( self::CSS_PUBLISHED ) )
