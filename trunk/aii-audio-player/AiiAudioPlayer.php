@@ -205,7 +205,7 @@
 	 * Default to null, which means that standard '{basepath}/mp3' folder under
 	 * extension directory will be published
   	 */
-  	protected $mp3Folder = null;
+  	public $mp3Folder = null;
   	
   	/**
   	 * @var array
