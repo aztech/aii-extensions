@@ -324,7 +324,6 @@ class AiiPublishRegisterBehavior extends CBehavior
 				$media = is_array( $cssFile ) && isset( $cssFile['media'] ) ? $cssFile['media'] : $this->defaultMedia;
 				#published resource 
 				$cssPubFile = $this->_published['{css}'].'/'.$cssFileName;
-				echo $cssPubFile;
 				if ( !Yii::app()->clientScript->isCssFileRegistered( $cssPubFile , $media ) )
 				{
 					Yii::app()->clientScript->registerCssFile( $cssPubFile , $media );
@@ -415,11 +414,11 @@ class AiiPublishRegisterBehavior extends CBehavior
 			}
 			#publish "traditional" way
 			else
-				$this->_published['{css}'] = CHtml::asset( $this->cssPath , $this->share );
+				$this->_published['{css}'] = CHtml::asset( strtr ( $this->cssPath , $this->getTr( ) ) , $this->share );
 		}
 		#check if user sets already published css files path
 		elseif ( !isset ( $this->_published['{css}'] ) )
-			$this->_published['{css}'] = $this->cssPath;
+			$this->_published['{css}'] = strtr ( $this->cssPath , $this->getTr( ) );
 		
 		$this->updateStatus( self::CSS_PUBLISHED );
 		return $this->_published['{css}'];
@@ -448,11 +447,11 @@ class AiiPublishRegisterBehavior extends CBehavior
 			}
 			#publish "traditional" way
 			else
-				$this->_published['{js}'] = CHtml::asset( $this->jsPath , $this->share );
+				$this->_published['{js}'] = CHtml::asset( strtr( $this->jsPath , $this->getTr( ) ) , $this->share );
 		}
 		#check if user sets already published js files path		
 		elseif ( !isset ( $this->_published['{js}'] ) )
-			$this->_published['{js}'] = $this->jsPath;
+			$this->_published['{js}'] = strtr( $this->jsPath , $this->getTr( ) );
 
 		$this->updateStatus( self::JS_PUBLISHED );
 		return $this->_published['{js}'];
