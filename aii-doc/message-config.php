@@ -4,7 +4,7 @@ return array(
     'messagePath'=> dirname(__FILE__).DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'messages',
 	'languages' => array( 'pl' , 'en' ),
 	'fileTypes' => array( 'php' ),
-	'exclude' => array( '.svn' , 'tags' , 'branches', 'aii-doc' ),
+	'exclude' => array( '.svn' , 'tags' , 'branches', 'aii-doc', 'aii-audio-player'),
 	'translator' => 'Yii::t',
 );
 ?>
