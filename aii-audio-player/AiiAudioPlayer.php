@@ -282,8 +282,6 @@
     			'jsPath' => '{assets}/js',
     			'otherResToPublish' => array( 'mp3Folder' => $this->mp3Folder ),
     	) );
-    	$this->publishAll( );
-    	$this->registerAll( );
     }
   	
   	protected function addOption( $option , $value , $type, $playerId = null )
@@ -295,7 +293,7 @@
   				$this->_players[$id]['options'][$option] = $value;
   		}
   		else
-  			throw new CException( 'aii-audio-player' , Yii::t( 'Player with id {id} dosn\'t exist!' , array ( '{id}' => $id ) ) );
+  			throw new CException( Yii::t( 'aii-audio-player', 'Player with id {id} dosn\'t exist!' , array ( '{id}' => $id ) ) );
   	}
   	
   	public function addTrack( $playerId , $mp3 )
@@ -342,7 +340,6 @@
 	  			$this->processTrackOptions( $playerId , $tracks );
 	  	else
 	  		$this->processTrackOptions( $this->playerID , $this->trackOptions );
-	  	
 	  	foreach ( $this->_players as $playerId => $player )
 	  	{
 	  		#do we have player-based player options?
@@ -359,24 +356,24 @@
 	  		#do we have player-based flash options?
 	  		if ( isset ( $this->flashPlayerOptions[$playerId] ) )
 	  			if ( is_array( $this->flashPlayerOptions[$playerId] ) )
-	  				$this->addOptions( $playedId , $this->flashPlayerOptions[$playerId] , self::OPTION_FLASH );
+	  				$this->addOptions( $playerId , $this->flashPlayerOptions[$playerId] , self::OPTION_FLASH );
 	  			else
 	  				throw new CException( Yii::t( 'aii-audio-player' , 'Flash player options for player "{player}" need to be specified via array.' , array ( '{player}' => $playerId ) ) );
 			elseif ( $this->singlePlayer === true )
 				$this->addSetupOptions( $this->flashPlayerOptions );
 			elseif ( is_array( $this->flashPlayerOptions ) )
-				$this->addOptions( $playedId , $this->flashPlayerOptions , self::OPTION_FLASH );
+				$this->addOptions( $playerId , $this->flashPlayerOptions , self::OPTION_FLASH );
 
 			#do we have player-based colour scheme options?
 			if ( isset ( $this->colourSchemeOptions[$playerId] ) )
 				if ( is_array( $this->colourSchemeOptions[$playerId] ) )
-					$this->addOptions( $playedId , $this->colourSchemeOptions[$playerId] , self::OPTION_COLOUR );
+					$this->addOptions( $playerId , $this->colourSchemeOptions[$playerId] , self::OPTION_COLOUR );
 				else
 					throw new CException( Yii::t( 'aii-audio-player' , 'Colour scheme  player options for player "{player}" need to be specified via array.' , array ( '{player}' => $playerId ) ) );
 			elseif ( $this->singlePlayer === true )
 				$this->addSetupOptions( $this->colourSchemeOptions );
 			elseif ( is_array( $this->colourSchemeOptions ) )
-				$this->addOptions( $playedId , $this->colourSchemeOptions , self::OPTION_COLOUR );			
+				$this->addOptions( $playerId , $this->colourSchemeOptions , self::OPTION_COLOUR );
 	  	}
   	}
   	
@@ -391,7 +388,6 @@
   		#mp3 file need to be specified
   		if ( !isset( $options['soundFile'] ) )
   			throw new CException( Yii::t( 'aii-audio-player' , 'Mp3 file name is missing. Please set it via track option "soundFile".') );
-  		
   		#alternative content need to be specified
   		if ( isset( $options['alternative'] ) )
   		{
@@ -411,12 +407,14 @@
   	 */
   	protected function addOptions( $playerId , array $options , $type )
   	{
+        if(!isset($this->_players[$playerId]['options']))
+            $this->_players[$playerId]['options']=array();
   		if ( isset( $this->_players[$playerId] ) )
   			if ( YII_DEBUG )
   				foreach ( $options as $option => $value )
   					$this->addOption( $option , $value , $type , $playerId );
   			else
-  				$this->_players[$playerId]['options'] = array_merge( $this->_players[$playerId]['options'] , $playerId );
+  				$this->_players[$playerId]['options'] = array_merge( $this->_players[$playerId]['options'] , $options );
   		else
   			if ( YII_DEBUG )
   				foreach ( $options as $option => $value )
@@ -435,7 +433,8 @@
   	 */
 	public function run( )
 	{
-			
+    	$this->publishAll( );
+    	$this->registerAll( );
 		if ( ( $assets = $this->getPublished( '{assets}' ) ) === false )
 			throw new CException( Yii::t( 'aii-audio-player' , 'Can\'t find published assets for Aii Audio Player extension.' ) );
 
