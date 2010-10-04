@@ -388,6 +388,12 @@
   		#mp3 file need to be specified
   		if ( !isset( $options['soundFile'] ) )
   			throw new CException( Yii::t( 'aii-audio-player' , 'Mp3 file name is missing. Please set it via track option "soundFile".') );
+  		#if there is a comma we put the soundfiles into an array
+  		if(strpos($options['soundFile'],',') != false) 
+  		{
+			$tempsoundarray=explode(',',$options['soundFile']);
+			$options['soundFile']=$tempsoundarray;
+  		}
   		#alternative content need to be specified
   		if ( isset( $options['alternative'] ) )
   		{
@@ -462,8 +468,16 @@
 		#echoes each players
 		foreach ( $this->_players as $id => $player )
 		{
-			$embedTr = array( );			
-			$player['tracks']['soundFile'] = $this->getPublished( 'mp3Folder' ).'/'.$player['tracks']['soundFile'];
+			$embedTr = array( );	
+			if(is_array($player['tracks']['soundFile']))
+			{
+				$tempfiles='';
+				foreach ($player['tracks']['soundFile'] as $value)
+					$tempfiles .=$this->getPublished( 'mp3Folder' ).'/'.$value.',';
+				$player['tracks']['soundFile']=$tempfiles;
+			}else{		
+				$player['tracks']['soundFile'] = $this->getPublished( 'mp3Folder' ).'/'.$player['tracks']['soundFile'];
+			}
 			if ( isset( $player['options'] ) )
 				$embedTr['{options}'] = CJavaScript::encode( array_merge( $player['tracks'] , $player['options'] ) );
 			else
