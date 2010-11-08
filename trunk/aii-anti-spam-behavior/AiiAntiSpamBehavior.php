@@ -1,4 +1,23 @@
 <?php
+/**
+ * This behavior is designed to use as anti-spam solution
+ * e.g. for comments model. The basis of this solution 
+ * is to use hidden fields in form and check if they are empty
+ * during validation. This is because most of spambots fill
+ * all fields in form. Real users doesn't :)
+ * 
+ * Second anti-spam solution is checking how long form is filled
+ * by submitter. Robots fills form really quick, while user
+ * need for that at least 1-2 seconds. Measuring time between
+ * creating model and saving it gives us answer if we are dealing
+ * with form filled by reals user of spambot.
+ * 
+ * @author Tomasz Suchanek <tomasz.suchanek@gmail.com>
+ * @copyright Copyright &copy; 2010 Tomasz "Aztech" Suchanek
+ * @license http://www.yiiframework.com/license/
+ * @package aii.extensions
+ * @version 0.1.0
+ */
 
 class AiiAntiSpamBehavior extends CActiveRecordBehavior {
 
